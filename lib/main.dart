@@ -2524,8 +2524,25 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   bool registerMode = false;
+  late final AnimationController _nationalResultsButtonController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nationalResultsButtonController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _nationalResultsButtonController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2601,24 +2618,119 @@ class _AuthScreenState extends State<AuthScreen> {
                           ],
                         ),
                         if (!registerMode)
-                          FilledButton.icon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const NationalResultsPage(),
+                          AnimatedBuilder(
+                            animation: _nationalResultsButtonController,
+                            builder: (context, child) {
+                              final progress =
+                                  _nationalResultsButtonController.value;
+                              final pulse = sin(progress * pi * 2);
+                              final scale = 1 + (pulse.clamp(0, 1) * 0.018);
+                              final glowOpacity =
+                                  0.20 + (pulse.clamp(0, 1) * 0.18);
+
+                              return Transform.scale(
+                                scale: scale,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(22),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color.fromRGBO(
+                                          16,
+                                          185,
+                                          129,
+                                          glowOpacity,
+                                        ),
+                                        blurRadius: 22,
+                                        spreadRadius: 1.5,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: DecoratedBox(
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Color(0xFF10B981),
+                                                  Color(0xFF059669),
+                                                  Color(0xFF16A34A),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned.fill(
+                                          child: FractionalTranslation(
+                                            translation: Offset(
+                                              (progress * 2.2) - 1.1,
+                                              0,
+                                            ),
+                                            child: Align(
+                                              alignment: Alignment.center,
+                                              child: Container(
+                                                width: 82,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      Color.fromRGBO(
+                                                        255,
+                                                        255,
+                                                        255,
+                                                        0,
+                                                      ),
+                                                      Color.fromRGBO(
+                                                        255,
+                                                        255,
+                                                        255,
+                                                        0.24,
+                                                      ),
+                                                      Color.fromRGBO(
+                                                        255,
+                                                        255,
+                                                        255,
+                                                        0,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        child!,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: FilledButton.icon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const NationalResultsPage(),
+                                ),
                               ),
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F9F6E),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(56),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                foregroundColor: Colors.white,
+                                shadowColor: Colors.transparent,
+                                minimumSize: const Size.fromHeight(58),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
                               ),
-                            ),
-                            icon: const Icon(Icons.emoji_events_rounded),
-                            label: const Text(
-                              'نتائج المسابقات الوطنية',
-                              style: TextStyle(fontWeight: FontWeight.w900),
+                              icon: const Icon(Icons.emoji_events_rounded),
+                              label: const Text(
+                                'نتائج المسابقات الوطنية',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                             ),
                           ),
                         const AuthFooterLinks(),
