@@ -3505,6 +3505,7 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   bool isSearching = false;
   bool isUploading = false;
   bool isLoadingCenters = false;
+  bool didRequestConcoursCenters = false;
   bool showCelebration = false;
   String? message;
 
@@ -3512,7 +3513,13 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   void initState() {
     super.initState();
     applausePlayer = AudioPlayer();
-    if (widget.examType == 'concours') {
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.examType == 'concours' && !didRequestConcoursCenters) {
+      didRequestConcoursCenters = true;
       unawaited(loadConcoursCenters());
     }
   }
