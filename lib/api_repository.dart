@@ -240,13 +240,25 @@ class ApiRepository {
   Future<List<Map<String, dynamic>>> searchNationalResults({
     required String examType,
     required String query,
+    String? center,
   }) async {
+    final centerQuery = center == null || center.trim().isEmpty
+        ? ''
+        : '&center=${Uri.encodeQueryComponent(center.trim())}';
     final data = await get(
-      '/api/results/$examType?q=${Uri.encodeQueryComponent(query)}',
+      '/api/results/$examType?q=${Uri.encodeQueryComponent(query)}$centerQuery',
     );
     return (data['results'] as List? ?? const [])
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  Future<List<String>> nationalResultCenters({required String examType}) async {
+    final data = await get('/api/results/$examType/centers');
+    return (data['centers'] as List? ?? const [])
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
         .toList();
   }
 

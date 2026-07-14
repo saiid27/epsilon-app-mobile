@@ -1965,6 +1965,7 @@ class SchoolStore extends ChangeNotifier {
   Future<List<NationalExamResult>> searchNationalResults({
     required String examType,
     required String query,
+    String? center,
   }) async {
     if (!firebaseEnabled) {
       return const [];
@@ -1972,8 +1973,18 @@ class SchoolStore extends ChangeNotifier {
     final items = await (_repository as ApiRepository).searchNationalResults(
       examType: examType,
       query: query,
+      center: center,
     );
     return items.map(_nationalResultFromApi).toList();
+  }
+
+  Future<List<String>> nationalResultCenters({required String examType}) async {
+    if (!firebaseEnabled) {
+      return const [];
+    }
+    return (_repository as ApiRepository).nationalResultCenters(
+      examType: examType,
+    );
   }
 
   Future<int> uploadNationalResults({
@@ -3485,11 +3496,15 @@ class NationalResultSearchPage extends StatefulWidget {
 
 class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   final queryController = TextEditingController();
+  final centerController = TextEditingController();
   late final AudioPlayer applausePlayer;
   Timer? celebrationTimer;
   List<NationalExamResult> results = [];
+  List<String> concoursCenters = [];
+  String? selectedConcoursCenter;
   bool isSearching = false;
   bool isUploading = false;
+  bool isLoadingCenters = false;
   bool showCelebration = false;
   String? message;
 
@@ -3497,6 +3512,9 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   void initState() {
     super.initState();
     applausePlayer = AudioPlayer();
+    if (widget.examType == 'concours') {
+      unawaited(loadConcoursCenters());
+    }
   }
 
   @override
@@ -3504,6 +3522,7 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
     celebrationTimer?.cancel();
     applausePlayer.dispose();
     queryController.dispose();
+    centerController.dispose();
     super.dispose();
   }
 
@@ -3515,6 +3534,35 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   bool isSuccessfulResult(NationalExamResult result) {
     final decision = result.decision.trim().toLowerCase();
     return decision.contains('admis') || decision.contains('ناجح');
+  }
+
+  Future<void> loadConcoursCenters() async {
+    setState(() => isLoadingCenters = true);
+    try {
+      final centers = await StoreScope.of(
+        context,
+      ).nationalResultCenters(examType: widget.examType);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        concoursCenters = centers;
+        selectedConcoursCenter = centers.contains(selectedConcoursCenter)
+            ? selectedConcoursCenter
+            : null;
+        if (selectedConcoursCenter == null) {
+          centerController.clear();
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => message = error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoadingCenters = false);
+      }
+    }
   }
 
   Future<void> triggerCelebration() async {
@@ -3537,6 +3585,18 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
   Future<void> search() async {
     final query = queryController.text.trim();
     final isNumberQuery = RegExp(r'^\d+$').hasMatch(query);
+    final typedCenter = centerController.text.trim();
+    final concoursCenter =
+        selectedConcoursCenter?.trim() ??
+        (concoursCenters.contains(typedCenter) ? typedCenter : null);
+    if (widget.examType == 'concours' &&
+        (concoursCenter == null || concoursCenter.isEmpty)) {
+      setState(() {
+        message = 'اختر مركز الامتحان أولا.';
+        results = [];
+      });
+      return;
+    }
     if (!isNumberQuery && query.length < 2) {
       setState(() {
         message = 'اكتب رقم المترشح أو جزءا من الاسم الكامل.';
@@ -3549,15 +3609,19 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
       message = null;
     });
     try {
-      final found = await StoreScope.of(
-        context,
-      ).searchNationalResults(examType: widget.examType, query: query);
+      final found = await StoreScope.of(context).searchNationalResults(
+        examType: widget.examType,
+        query: query,
+        center: widget.examType == 'concours' ? concoursCenter : null,
+      );
       final displayResults = widget.examType == 'concours' && isNumberQuery
           ? found.take(1).toList()
           : found;
       setState(() {
         results = displayResults;
-        message = displayResults.isEmpty ? 'لم يتم العثور على نتيجة مطابقة.' : null;
+        message = displayResults.isEmpty
+            ? 'لم يتم العثور على نتيجة مطابقة.'
+            : null;
       });
       if (displayResults.any(isSuccessfulResult)) {
         await triggerCelebration();
@@ -3630,6 +3694,61 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.examType == 'concours') ...[
+                      Autocomplete<String>(
+                        optionsBuilder: (textEditingValue) {
+                          final query = textEditingValue.text.trim();
+                          final matches = query.isEmpty
+                              ? concoursCenters
+                              : concoursCenters.where(
+                                  (center) => center.contains(query),
+                                );
+                          return matches.take(30);
+                        },
+                        onSelected: (value) {
+                          setState(() {
+                            selectedConcoursCenter = value;
+                            centerController.text = value;
+                            results = [];
+                            message = null;
+                          });
+                        },
+                        fieldViewBuilder:
+                            (
+                              context,
+                              textEditingController,
+                              focusNode,
+                              onFieldSubmitted,
+                            ) {
+                              if (textEditingController.text !=
+                                  centerController.text) {
+                                textEditingController.text =
+                                    centerController.text;
+                              }
+                              return TextField(
+                                controller: textEditingController,
+                                focusNode: focusNode,
+                                enabled: !isLoadingCenters,
+                                textInputAction: TextInputAction.next,
+                                onChanged: (value) {
+                                  centerController.text = value;
+                                  if (value.trim() != selectedConcoursCenter) {
+                                    selectedConcoursCenter = null;
+                                  }
+                                },
+                                decoration: InputDecoration(
+                                  labelText: isLoadingCenters
+                                      ? 'جاري تحميل مراكز الامتحان...'
+                                      : 'مركز الامتحان',
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance_rounded,
+                                  ),
+                                ),
+                              );
+                            },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextField(
                       controller: queryController,
                       textInputAction: TextInputAction.search,
