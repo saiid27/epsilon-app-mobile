@@ -338,6 +338,16 @@ class NationalExamResult {
   final String decision;
   final String rank;
   final Map<String, dynamic> rawData;
+
+  String get series {
+    for (final key in ['SERIE', 'Série', 'Serie', 'serie', 'الشعبة']) {
+      final value = rawData[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
+  }
 }
 
 class SchoolStore extends ChangeNotifier {
@@ -3811,6 +3821,11 @@ class NationalResultCard extends StatelessWidget {
                 icon: Icons.confirmation_number_outlined,
                 label: 'رقم المترشح',
                 value: result.candidateNumber,
+              ),
+              ResultDataRow(
+                icon: Icons.school_outlined,
+                label: 'الشعبة',
+                value: result.series,
               ),
               ResultDataRow(
                 icon: Icons.account_balance_rounded,
