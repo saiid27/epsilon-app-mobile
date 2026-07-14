@@ -339,6 +339,15 @@ class NationalExamResult {
   final String rank;
   final Map<String, dynamic> rawData;
 
+  double? get numericScore {
+    final normalized = score.trim().replaceAll(',', '.');
+    return double.tryParse(normalized);
+  }
+
+  bool get hasConcoursPassingScore {
+    return examType == 'concours' && (numericScore ?? 0) >= 100;
+  }
+
   String get series {
     for (final key in [
       'SERIE',
@@ -3540,7 +3549,9 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
 
   bool isSuccessfulResult(NationalExamResult result) {
     final decision = result.decision.trim().toLowerCase();
-    return decision.contains('admis') || decision.contains('ناجح');
+    return result.hasConcoursPassingScore ||
+        decision.contains('admis') ||
+        decision.contains('ناجح');
   }
 
   Future<void> loadConcoursCenters() async {
@@ -3824,6 +3835,16 @@ class NationalResultCard extends StatelessWidget {
   final NationalExamResult result;
 
   ResultDecisionStyle get decisionStyle {
+    if (result.hasConcoursPassingScore) {
+      return const ResultDecisionStyle(
+        title: 'مبروك! لقد نجحت',
+        subtitle: 'نتمنى لك مستقبلاً موفقاً ومشرقاً',
+        color: Color(0xFF149255),
+        background: Color(0xFFEFFAF3),
+        border: Color(0xFFBFE8CF),
+        icon: Icons.verified_rounded,
+      );
+    }
     final normalized = result.decision.trim().toLowerCase();
     if (normalized.contains('sessionnaire')) {
       return const ResultDecisionStyle(
@@ -3858,7 +3879,9 @@ class NationalResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDecision = result.decision.trim().isNotEmpty;
-    final style = hasDecision ? decisionStyle : null;
+    final style = hasDecision || result.hasConcoursPassingScore
+        ? decisionStyle
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
