@@ -2554,26 +2554,6 @@ class _AuthScreenState extends State<AuthScreen> {
                             alignment: Alignment.topCenter,
                           ),
                         ),
-                        Positioned(
-                          left: 18,
-                          top: 16,
-                          child: SizedBox(
-                            width: 58,
-                            height: 58,
-                            child: Material(
-                              color: Colors.transparent,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () {
-                                  if (registerMode) {
-                                    setState(() => registerMode = false);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
