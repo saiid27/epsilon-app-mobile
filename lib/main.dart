@@ -3552,7 +3552,7 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
       final found = await StoreScope.of(
         context,
       ).searchNationalResults(examType: widget.examType, query: query);
-      final displayResults = widget.examType == 'concours'
+      final displayResults = widget.examType == 'concours' && isNumberQuery
           ? found.take(1).toList()
           : found;
       setState(() {
