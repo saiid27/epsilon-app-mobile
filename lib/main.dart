@@ -381,6 +381,20 @@ class OfferSlide {
   final int durationSeconds;
 }
 
+class OfferTextSection {
+  const OfferTextSection({
+    required this.title,
+    required this.body,
+    required this.active,
+  });
+
+  final String title;
+  final String body;
+  final bool active;
+
+  bool get shouldShow => active && body.trim().isNotEmpty;
+}
+
 class SchoolStore extends ChangeNotifier {
   SchoolStore({required this.firebaseEnabled}) {
     unawaited(_loadReadNotifications());
@@ -1177,6 +1191,14 @@ class SchoolStore extends ChangeNotifier {
       title: (data['title'] as String?) ?? '',
       imageUrl: (data['imageUrl'] as String?) ?? '',
       durationSeconds: duration.clamp(1, 120),
+    );
+  }
+
+  OfferTextSection _offerTextFromApi(Map<String, dynamic> data) {
+    return OfferTextSection(
+      title: (data['title'] as String?) ?? '',
+      body: (data['body'] as String?) ?? '',
+      active: data['active'] != false,
     );
   }
 
@@ -2026,6 +2048,14 @@ class SchoolStore extends ChangeNotifier {
     }
     final items = await (_repository as ApiRepository).offers();
     return items.map(_offerSlideFromApi).toList();
+  }
+
+  Future<OfferTextSection> offerTextSection() async {
+    if (!firebaseEnabled) {
+      return const OfferTextSection(title: '', body: '', active: false);
+    }
+    final data = await (_repository as ApiRepository).offerTextSection();
+    return _offerTextFromApi(data);
   }
 
   Future<int> uploadNationalResults({
@@ -3306,7 +3336,9 @@ class NationalResultsPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 120),
+                    const SizedBox(height: 34),
+                    const ResultsTextSection(),
+                    const SizedBox(height: 72),
                     FilledButton.icon(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -3562,6 +3594,89 @@ class _ResultsOffersSectionState extends State<ResultsOffersSection> {
                     ),
                 ],
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ResultsTextSection extends StatefulWidget {
+  const ResultsTextSection({super.key});
+
+  @override
+  State<ResultsTextSection> createState() => _ResultsTextSectionState();
+}
+
+class _ResultsTextSectionState extends State<ResultsTextSection> {
+  OfferTextSection? section;
+  bool didLoad = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!didLoad) {
+      didLoad = true;
+      unawaited(loadSection());
+    }
+  }
+
+  Future<void> loadSection() async {
+    try {
+      final loaded = await StoreScope.of(context).offerTextSection();
+      if (mounted) {
+        setState(() => section = loaded);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => section = const OfferTextSection(
+            title: '',
+            body: '',
+            active: false,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current = section;
+    if (current == null || !current.shouldShow) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDDE6FF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (current.title.trim().isNotEmpty) ...[
+            Text(
+              current.title,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF1E3A8A),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            current.body,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              color: Color(0xFF334155),
+              fontSize: 15,
+              height: 1.55,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

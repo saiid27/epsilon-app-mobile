@@ -270,6 +270,12 @@ class ApiRepository {
         .toList();
   }
 
+  Future<Map<String, dynamic>> offerTextSection() async {
+    final data = await get('/api/offers');
+    final section = data['textSection'];
+    return section is Map ? Map<String, dynamic>.from(section) : const {};
+  }
+
   Future<int> uploadNationalResults({
     required String examType,
     required String filePath,
