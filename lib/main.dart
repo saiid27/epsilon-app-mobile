@@ -340,7 +340,15 @@ class NationalExamResult {
   final Map<String, dynamic> rawData;
 
   String get series {
-    for (final key in ['SERIE', 'Série', 'Serie', 'serie', 'الشعبة']) {
+    for (final key in [
+      'SERIE',
+      'Série',
+      'Serie',
+      'serie',
+      'Type',
+      'type',
+      'الشعبة',
+    ]) {
       final value = rawData[key];
       if (value != null && value.toString().trim().isNotEmpty) {
         return value.toString().trim();
