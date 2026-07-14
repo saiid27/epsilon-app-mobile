@@ -262,6 +262,14 @@ class ApiRepository {
         .toList();
   }
 
+  Future<List<Map<String, dynamic>>> offers() async {
+    final data = await get('/api/offers');
+    return (data['offers'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
   Future<int> uploadNationalResults({
     required String examType,
     required String filePath,

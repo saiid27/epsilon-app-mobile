@@ -367,6 +367,20 @@ class NationalExamResult {
   }
 }
 
+class OfferSlide {
+  const OfferSlide({
+    required this.id,
+    required this.title,
+    required this.imageUrl,
+    required this.durationSeconds,
+  });
+
+  final String id;
+  final String title;
+  final String imageUrl;
+  final int durationSeconds;
+}
+
 class SchoolStore extends ChangeNotifier {
   SchoolStore({required this.firebaseEnabled}) {
     unawaited(_loadReadNotifications());
@@ -1153,6 +1167,16 @@ class SchoolStore extends ChangeNotifier {
       decision: (data['decision'] as String?) ?? '',
       rank: (data['rank'] as String?) ?? '',
       rawData: rawData is Map ? Map<String, dynamic>.from(rawData) : const {},
+    );
+  }
+
+  OfferSlide _offerSlideFromApi(Map<String, dynamic> data) {
+    final duration = (data['durationSeconds'] as num?)?.toInt() ?? 5;
+    return OfferSlide(
+      id: '${data['id'] ?? ''}',
+      title: (data['title'] as String?) ?? '',
+      imageUrl: (data['imageUrl'] as String?) ?? '',
+      durationSeconds: duration.clamp(1, 120),
     );
   }
 
@@ -1994,6 +2018,14 @@ class SchoolStore extends ChangeNotifier {
     return (_repository as ApiRepository).nationalResultCenters(
       examType: examType,
     );
+  }
+
+  Future<List<OfferSlide>> offers() async {
+    if (!firebaseEnabled) {
+      return const [];
+    }
+    final items = await (_repository as ApiRepository).offers();
+    return items.map(_offerSlideFromApi).toList();
   }
 
   Future<int> uploadNationalResults({
@@ -3246,23 +3278,7 @@ class NationalResultsPage extends StatelessWidget {
                   children: [
                     const ResultsTopWidget(),
                     const SizedBox(height: 14),
-                    Row(
-                      children: const [
-                        Expanded(
-                          child: ResultsImageCard(
-                            title: 'العروض',
-                            image: 'assets/onboarding/content.jpeg',
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: ResultsImageCard(
-                            title: 'تعريف بنا',
-                            image: 'assets/onboarding/welcome.jpeg',
-                          ),
-                        ),
-                      ],
-                    ),
+                    const ResultsOffersSection(),
                     const SizedBox(height: 78),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -3368,6 +3384,183 @@ class ResultsTopWidget extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ResultsOffersSection extends StatefulWidget {
+  const ResultsOffersSection({super.key});
+
+  @override
+  State<ResultsOffersSection> createState() => _ResultsOffersSectionState();
+}
+
+class _ResultsOffersSectionState extends State<ResultsOffersSection> {
+  List<OfferSlide> offers = [];
+  Timer? timer;
+  int index = 0;
+  bool didLoad = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!didLoad) {
+      didLoad = true;
+      unawaited(loadOffers());
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> loadOffers() async {
+    try {
+      final loaded = await StoreScope.of(context).offers();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        offers = loaded.where((slide) => slide.imageUrl.isNotEmpty).toList();
+        index = 0;
+      });
+      scheduleNext();
+    } catch (_) {
+      if (mounted) {
+        setState(() => offers = const []);
+      }
+    }
+  }
+
+  void scheduleNext() {
+    timer?.cancel();
+    if (offers.length < 2) {
+      return;
+    }
+    final current = offers[index];
+    timer = Timer(Duration(seconds: current.durationSeconds), () {
+      if (!mounted || offers.isEmpty) {
+        return;
+      }
+      setState(() => index = (index + 1) % offers.length);
+      scheduleNext();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (offers.isEmpty) {
+      return Row(
+        children: const [
+          Expanded(
+            child: ResultsImageCard(
+              title: 'العروض',
+              image: 'assets/onboarding/content.jpeg',
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: ResultsImageCard(
+              title: 'تعريف بنا',
+              image: 'assets/onboarding/welcome.jpeg',
+            ),
+          ),
+        ],
+      );
+    }
+
+    final offer = offers[index];
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 450),
+              child: Image.network(
+                offer.imageUrl,
+                key: ValueKey(offer.id),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFEFF3FF),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.image_not_supported_rounded,
+                    color: Color(0xFF2F5BEA),
+                    size: 42,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.52),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (offer.title.trim().isNotEmpty)
+                  Text(
+                    offer.title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                if (offers.length > 1) ...[
+                  const SizedBox(height: 8),
+                  if (offers.length <= 8)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(offers.length, (dotIndex) {
+                        final active = dotIndex == index;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          width: active ? 18 : 7,
+                          height: 7,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        );
+                      }),
+                    )
+                  else
+                    Text(
+                      '${index + 1} / ${offers.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
