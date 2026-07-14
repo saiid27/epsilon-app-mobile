@@ -3552,11 +3552,14 @@ class _NationalResultSearchPageState extends State<NationalResultSearchPage> {
       final found = await StoreScope.of(
         context,
       ).searchNationalResults(examType: widget.examType, query: query);
+      final displayResults = widget.examType == 'concours'
+          ? found.take(1).toList()
+          : found;
       setState(() {
-        results = found;
-        message = found.isEmpty ? 'لم يتم العثور على نتيجة مطابقة.' : null;
+        results = displayResults;
+        message = displayResults.isEmpty ? 'لم يتم العثور على نتيجة مطابقة.' : null;
       });
-      if (found.any(isSuccessfulResult)) {
+      if (displayResults.any(isSuccessfulResult)) {
         await triggerCelebration();
       }
     } catch (error) {
