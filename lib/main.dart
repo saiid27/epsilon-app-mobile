@@ -3728,60 +3728,63 @@ class NationalResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = decisionStyle;
+    final hasDecision = result.decision.trim().isNotEmpty;
+    final style = hasDecision ? decisionStyle : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: style.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: style.border),
-          ),
-          child: Row(
-            textDirection: TextDirection.rtl,
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: style.color,
-                  shape: BoxShape.circle,
+        if (style != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: style.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: style.border),
+            ),
+            child: Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: style.color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(style.icon, color: Colors.white, size: 28),
                 ),
-                child: Icon(style.icon, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      style.title,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: style.color,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        style.title,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: style.color,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      style.subtitle,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: Color(0xFF475569),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 4),
+                      Text(
+                        style.subtitle,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: Color(0xFF475569),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
