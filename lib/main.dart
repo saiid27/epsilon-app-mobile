@@ -345,7 +345,7 @@ class NationalExamResult {
   }
 
   bool get hasConcoursPassingScore {
-    return examType == 'concours' && (numericScore ?? 0) >= 100;
+    return examType == 'concours' && (numericScore ?? 0) >= 85;
   }
 
   String get series {
