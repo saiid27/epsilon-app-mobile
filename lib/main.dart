@@ -4237,8 +4237,8 @@ class NationalResultCard extends StatelessWidget {
   ResultDecisionStyle get decisionStyle {
     if (result.hasConcoursPassingScore) {
       return const ResultDecisionStyle(
-        title: 'مبروك! لقد نجحت',
-        subtitle: 'نتمنى لك مستقبلاً موفقاً ومشرقاً',
+        title: 'منصة ابسيلون تبارك لك',
+        subtitle: 'وتهنئك على نجاحك',
         color: Color(0xFF149255),
         background: Color(0xFFEFFAF3),
         border: Color(0xFFBFE8CF),
@@ -4248,8 +4248,8 @@ class NationalResultCard extends StatelessWidget {
     final normalized = result.decision.trim().toLowerCase();
     if (normalized.contains('sessionnaire')) {
       return const ResultDecisionStyle(
-        title: 'أنت مؤهل للدورة الثانية',
-        subtitle: 'فرصتك ما زالت قائمة، ركز جيداً واستعد بثقة للمرحلة القادمة',
+        title: 'منصة ابسيلون تتمنى لك حظاً أوفر',
+        subtitle: 'في الدورة التكميلية',
         color: Color(0xFF2563EB),
         background: Color(0xFFEFF6FF),
         border: Color(0xFFBFDBFE),
@@ -4258,8 +4258,8 @@ class NationalResultCard extends StatelessWidget {
     }
     if (normalized.contains('admis') || normalized.contains('ناجح')) {
       return const ResultDecisionStyle(
-        title: 'مبروك! لقد نجحت',
-        subtitle: 'نتمنى لك مستقبلاً موفقاً ومشرقاً',
+        title: 'منصة ابسيلون تبارك لك',
+        subtitle: 'وتهنئك على نجاحك',
         color: Color(0xFF149255),
         background: Color(0xFFEFFAF3),
         border: Color(0xFFBFE8CF),
@@ -4267,8 +4267,8 @@ class NationalResultCard extends StatelessWidget {
       );
     }
     return const ResultDecisionStyle(
-      title: 'لم توفق هذه المرة',
-      subtitle: 'ليست النهاية، اجعلها بداية أقوى واستعد للمحاولة القادمة',
+      title: 'منصة ابسيلون تتمنى لك',
+      subtitle: 'حظاً أوفر',
       color: Color(0xFFB45309),
       background: Color(0xFFFFF7ED),
       border: Color(0xFFFED7AA),
