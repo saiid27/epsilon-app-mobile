@@ -6734,11 +6734,7 @@ class PaymentProofPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final path = imagePath;
-    final image = path == null
-        ? null
-        : path.startsWith('http')
-        ? Image.network(path, fit: BoxFit.cover)
-        : Image.file(File(path), fit: BoxFit.cover);
+    final image = path == null ? null : _PaymentProofImage(path: path);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -6750,28 +6746,115 @@ class PaymentProofPreview extends StatelessWidget {
               ),
             ),
       child: Container(
-        height: height,
+        constraints: BoxConstraints(
+          minHeight: 130,
+          maxHeight: height,
+          maxWidth: MediaQuery.sizeOf(context).width - 32,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F6FF),
           border: Border.all(color: const Color(0xFFD8E2FF)),
           borderRadius: BorderRadius.circular(14),
         ),
         clipBehavior: Clip.antiAlias,
-        child:
-            image ??
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.add_photo_alternate_rounded,
-                  size: 42,
-                  color: Color(0xFF2F5BEA),
-                ),
-                const SizedBox(height: 8),
-                Text(emptyText),
-              ],
-            ),
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child:
+              image ??
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.add_photo_alternate_rounded,
+                    size: 42,
+                    color: Color(0xFF2F5BEA),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(emptyText),
+                ],
+              ),
+        ),
       ),
+    );
+  }
+}
+
+class _PaymentProofImage extends StatelessWidget {
+  const _PaymentProofImage({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = path.startsWith('http')
+        ? Image.network(
+            path,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, _, _) => const PaymentProofLoadError(),
+          )
+        : Image.file(
+            File(path),
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, _, _) => const PaymentProofLoadError(),
+          );
+
+    return ColoredBox(
+      color: const Color(0xFFF8FAFF),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Center(child: image),
+      ),
+    );
+  }
+}
+
+class PaymentProofLoadError extends StatelessWidget {
+  const PaymentProofLoadError({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.broken_image_outlined, size: 38, color: Color(0xFF64748B)),
+        SizedBox(height: 8),
+        Text(
+          'تعذر عرض الصورة',
+          style: TextStyle(color: epsilonMuted, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+}
+
+class PaymentProofDetailsImage extends StatelessWidget {
+  const PaymentProofDetailsImage({required this.imagePath, super.key});
+
+  final String imagePath;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, _, _) => const PaymentProofLoadError(),
+      );
+    }
+
+    return Image.file(
+      File(imagePath),
+      fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, _, _) => const PaymentProofLoadError(),
     );
   }
 }
@@ -6783,10 +6866,6 @@ class PaymentProofDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = imagePath.startsWith('http')
-        ? Image.network(imagePath, fit: BoxFit.contain)
-        : Image.file(File(imagePath), fit: BoxFit.contain);
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -6794,8 +6873,17 @@ class PaymentProofDetailsPage extends StatelessWidget {
         foregroundColor: Colors.white,
         title: const Text('إثبات الدفع'),
       ),
-      body: Center(
-        child: InteractiveViewer(minScale: 0.8, maxScale: 5, child: image),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: InteractiveViewer(
+            minScale: 0.6,
+            maxScale: 5,
+            child: SizedBox.expand(
+              child: PaymentProofDetailsImage(imagePath: imagePath),
+            ),
+          ),
+        ),
       ),
     );
   }
