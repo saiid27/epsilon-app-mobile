@@ -2342,15 +2342,21 @@ class StartupSplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(28),
-            child: Image(
-              image: AssetImage('assets/onboarding/splash.jpeg'),
-              fit: BoxFit.contain,
+            padding: const EdgeInsets.all(28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  'assets/onboarding/epsilon_logo.jpeg',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
         ),
