@@ -109,6 +109,7 @@ class ApiRepository {
     required String phone,
     required String password,
     required String courseId,
+    required List<String> selectedSubjects,
     required String paymentSenderPhone,
   }) {
     return post('/api/auth/register-student', {
@@ -116,6 +117,7 @@ class ApiRepository {
       'phone': phone,
       'password': password,
       'courseId': courseId,
+      'selectedSubjects': selectedSubjects,
       'paymentSenderPhone': paymentSenderPhone,
     }, authenticated: false);
   }

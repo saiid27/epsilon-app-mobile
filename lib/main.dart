@@ -212,10 +212,11 @@ class AppUser {
     this.classId,
     this.courseId,
     this.subject,
+    List<String>? selectedSubjects,
     this.paymentProofPath,
     this.paymentSenderPhone,
     this.activeDeviceId,
-  });
+  }) : selectedSubjects = selectedSubjects ?? const [];
 
   final String id;
   final String name;
@@ -226,6 +227,7 @@ class AppUser {
   String? classId;
   String? courseId;
   String? subject;
+  List<String> selectedSubjects;
   String? paymentProofPath;
   String? paymentSenderPhone;
   String? activeDeviceId;
@@ -1014,6 +1016,7 @@ class SchoolStore extends ChangeNotifier {
       classId: data[UserFields.classId] as String?,
       courseId: data[UserFields.courseId] as String?,
       subject: data[UserFields.subject] as String?,
+      selectedSubjects: stringListFromDynamic(data['selectedSubjects']),
       paymentProofPath: data[UserFields.paymentProofUrl] as String?,
       paymentSenderPhone: data[UserFields.paymentSenderPhone] as String?,
       activeDeviceId: data[UserFields.activeDeviceId] as String?,
@@ -1105,6 +1108,7 @@ class SchoolStore extends ChangeNotifier {
       classId: data['classId'] as String? ?? data['level'] as String?,
       courseId: data['courseId'] as String? ?? data['level'] as String?,
       subject: data['subject'] as String?,
+      selectedSubjects: stringListFromDynamic(data['selectedSubjects']),
       paymentProofPath: data['paymentProofUrl'] as String?,
       paymentSenderPhone: data['paymentSenderPhone'] as String?,
       activeDeviceId: data['activeDeviceId'] as String?,
@@ -1448,6 +1452,7 @@ class SchoolStore extends ChangeNotifier {
       classId: user.classId,
       courseId: user.courseId,
       subject: user.subject,
+      selectedSubjects: user.selectedSubjects,
       paymentProofPath: user.paymentProofPath,
       paymentSenderPhone: user.paymentSenderPhone,
       activeDeviceId: user.activeDeviceId,
@@ -1471,6 +1476,7 @@ class SchoolStore extends ChangeNotifier {
     required String password,
     required String courseId,
     required String paymentProofPath,
+    required List<String> selectedSubjects,
     required String paymentSenderPhone,
   }) async {
     final course = courseById(courseId);
@@ -1483,6 +1489,7 @@ class SchoolStore extends ChangeNotifier {
         phone: phone,
         password: password,
         courseId: courseId,
+        selectedSubjects: selectedSubjects,
         paymentSenderPhone: paymentSenderPhone,
       );
       await _loadPublicApiData();
@@ -1499,6 +1506,7 @@ class SchoolStore extends ChangeNotifier {
         status: AccountStatus.pending,
         classId: course?.classId,
         courseId: courseId,
+        selectedSubjects: selectedSubjects,
         paymentProofPath: paymentProofPath,
         paymentSenderPhone: paymentSenderPhone.trim(),
       ),
@@ -5076,6 +5084,8 @@ class _RegisterCardState extends State<RegisterCard> {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  int step = 0;
   String? error;
 
   @override
@@ -5083,7 +5093,110 @@ class _RegisterCardState extends State<RegisterCard> {
     nameController.dispose();
     phoneController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  String get stepTitle {
+    return switch (step) {
+      0 => 'ما اسمك؟',
+      1 => 'ما رقم هاتفك؟',
+      2 => 'اختر كلمة المرور',
+      _ => 'أكد كلمة المرور',
+    };
+  }
+
+  String get nextLabel => step == 3 ? 'اختيار القسم' : 'التالي';
+
+  bool validateCurrentStep(SchoolStore store) {
+    final value = switch (step) {
+      0 => nameController.text.trim(),
+      1 => phoneController.text.trim(),
+      2 => passwordController.text,
+      _ => confirmPasswordController.text,
+    };
+    if (value.isEmpty) {
+      setState(() => error = 'أكمل هذه الخطوة أولا.');
+      return false;
+    }
+    if (step == 2 && passwordController.text.length < 6) {
+      setState(() => error = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+      return false;
+    }
+    if (step == 3 &&
+        confirmPasswordController.text != passwordController.text) {
+      setState(() => error = 'تأكيد كلمة المرور غير مطابق.');
+      return false;
+    }
+    if (step == 3 && store.courses.isEmpty) {
+      setState(() => error = 'لا توجد أقسام متاحة حاليا.');
+      return false;
+    }
+    setState(() => error = null);
+    return true;
+  }
+
+  void goNext(SchoolStore store) {
+    if (!validateCurrentStep(store)) {
+      return;
+    }
+    if (step < 3) {
+      setState(() => step += 1);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StudentCourseSelectionPage(
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+          password: passwordController.text,
+        ),
+      ),
+    );
+  }
+
+  Widget currentStepField() {
+    return switch (step) {
+      0 => TextField(
+        controller: nameController,
+        textInputAction: TextInputAction.next,
+        decoration: const InputDecoration(
+          labelText: 'اسم الطالب',
+          prefixIcon: Icon(Icons.badge_outlined),
+        ),
+        onSubmitted: (_) => goNext(StoreScope.of(context)),
+      ),
+      1 => TextField(
+        controller: phoneController,
+        keyboardType: TextInputType.phone,
+        textInputAction: TextInputAction.next,
+        decoration: const InputDecoration(
+          labelText: 'رقم الهاتف',
+          prefixIcon: Icon(Icons.phone_iphone_rounded),
+        ),
+        onSubmitted: (_) => goNext(StoreScope.of(context)),
+      ),
+      2 => TextField(
+        controller: passwordController,
+        obscureText: true,
+        textInputAction: TextInputAction.next,
+        decoration: const InputDecoration(
+          labelText: 'كلمة المرور',
+          prefixIcon: Icon(Icons.lock_outline_rounded),
+        ),
+        onSubmitted: (_) => goNext(StoreScope.of(context)),
+      ),
+      _ => TextField(
+        controller: confirmPasswordController,
+        obscureText: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          labelText: 'تأكيد كلمة المرور',
+          prefixIcon: Icon(Icons.lock_reset_rounded),
+        ),
+        onSubmitted: (_) => goNext(StoreScope.of(context)),
+      ),
+    };
   }
 
   @override
@@ -5092,35 +5205,25 @@ class _RegisterCardState extends State<RegisterCard> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'اسم الطالب',
-                prefixIcon: Icon(Icons.badge_outlined),
+            Text(
+              stepTitle,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: epsilonInk,
               ),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: (step + 1) / 4,
+              borderRadius: BorderRadius.circular(999),
+              minHeight: 7,
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
-                prefixIcon: Icon(Icons.phone_iphone_rounded),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'كلمة المرور',
-                prefixIcon: Icon(Icons.lock_outline_rounded),
-              ),
-            ),
+            currentStepField(),
             if (store.courses.isEmpty) ...[
               const SizedBox(height: 10),
               const EmptyState(text: 'لا توجد أقسام متاحة حاليا.'),
@@ -5131,32 +5234,18 @@ class _RegisterCardState extends State<RegisterCard> {
             ],
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () {
-                if (nameController.text.trim().isEmpty ||
-                    phoneController.text.trim().isEmpty ||
-                    passwordController.text.length < 6 ||
-                    store.courses.isEmpty) {
-                  setState(
-                    () => error =
-                        'أكمل البيانات، ويجب أن تكون كلمة المرور 6 أحرف على الأقل، مع توفر قسم واحد على الأقل.',
-                  );
-                  return;
-                }
-
-                setState(() => error = null);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => StudentCourseSelectionPage(
-                      name: nameController.text.trim(),
-                      phone: phoneController.text.trim(),
-                      password: passwordController.text,
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => goNext(store),
               icon: const Icon(Icons.arrow_back_rounded),
-              label: const Text('اختيار القسم'),
+              label: Text(nextLabel),
             ),
+            if (step > 0)
+              TextButton(
+                onPressed: () => setState(() {
+                  step -= 1;
+                  error = null;
+                }),
+                child: const Text('رجوع'),
+              ),
           ],
         ),
       ),
@@ -5258,16 +5347,33 @@ class StudentCourseSelectionPage extends StatelessWidget {
                 final course = store.courses[index];
                 return StudentCourseCard(
                   course: course,
-                  onSelect: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StudentPaymentPage(
-                        name: name,
-                        phone: phone,
-                        password: password,
-                        courseId: course.id,
+                  onSelect: () {
+                    final subjects = course.subjects;
+                    if (subjects.length <= 1) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StudentPaymentPage(
+                            name: name,
+                            phone: phone,
+                            password: password,
+                            courseId: course.id,
+                            selectedSubjects: subjects,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StudentSubjectSelectionPage(
+                          name: name,
+                          phone: phone,
+                          password: password,
+                          course: course,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -5433,12 +5539,111 @@ class StudentCourseCard extends StatelessWidget {
   }
 }
 
+class StudentSubjectSelectionPage extends StatefulWidget {
+  const StudentSubjectSelectionPage({
+    required this.name,
+    required this.phone,
+    required this.password,
+    required this.course,
+    super.key,
+  });
+
+  final String name;
+  final String phone;
+  final String password;
+  final Course course;
+
+  @override
+  State<StudentSubjectSelectionPage> createState() =>
+      _StudentSubjectSelectionPageState();
+}
+
+class _StudentSubjectSelectionPageState
+    extends State<StudentSubjectSelectionPage> {
+  late final Set<String> selectedSubjects = widget.course.subjects.toSet();
+  String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F9FF),
+      appBar: const EpsilonAppBar(title: 'اختيار المواد', showLogout: false),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          HeaderPanel(
+            title: widget.course.title,
+            subtitle: 'اختر المواد التي تريد الاشتراك فيها',
+            icon: Icons.fact_check_rounded,
+          ),
+          const SizedBox(height: 16),
+          SectionCard(
+            title: 'المواد المتاحة',
+            icon: Icons.subject_rounded,
+            child: Column(
+              children: [
+                for (final subject in widget.course.subjects)
+                  CheckboxListTile(
+                    value: selectedSubjects.contains(subject),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == true) {
+                          selectedSubjects.add(subject);
+                        } else {
+                          selectedSubjects.remove(subject);
+                        }
+                        error = null;
+                      });
+                    },
+                    title: Text(
+                      subject,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!, style: TextStyle(color: Colors.red.shade700)),
+                ],
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (selectedSubjects.isEmpty) {
+                      setState(() => error = 'اختر مادة واحدة على الأقل.');
+                      return;
+                    }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StudentPaymentPage(
+                          name: widget.name,
+                          phone: widget.phone,
+                          password: widget.password,
+                          courseId: widget.course.id,
+                          selectedSubjects: selectedSubjects.toList(),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: const Text('التالي'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class StudentPaymentPage extends StatefulWidget {
   const StudentPaymentPage({
     required this.name,
     required this.phone,
     required this.password,
     required this.courseId,
+    required this.selectedSubjects,
     super.key,
   });
 
@@ -5446,6 +5651,7 @@ class StudentPaymentPage extends StatefulWidget {
   final String phone;
   final String password;
   final String courseId;
+  final List<String> selectedSubjects;
 
   @override
   State<StudentPaymentPage> createState() => _StudentPaymentPageState();
@@ -5513,6 +5719,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
         password: widget.password,
         courseId: widget.courseId,
         paymentProofPath: image.path,
+        selectedSubjects: widget.selectedSubjects,
         paymentSenderPhone: paymentSenderPhoneController.text,
       );
       if (!mounted) {
@@ -5567,6 +5774,10 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
                 InfoRow(label: 'الاسم', value: widget.name),
                 InfoRow(label: 'رقم الهاتف', value: widget.phone),
                 InfoRow(label: 'القسم', value: course?.title ?? 'غير محدد'),
+                InfoRow(
+                  label: 'المواد',
+                  value: widget.selectedSubjects.join('، '),
+                ),
                 TextField(
                   controller: paymentSenderPhoneController,
                   enabled: !submitted,
@@ -7416,6 +7627,9 @@ class StudentDashboard extends StatelessWidget {
     final store = StoreScope.of(context);
     final student = store.currentUser!;
     final selectedSection = store.courseById(student.courseId);
+    final allowedSubjects = student.selectedSubjects.isNotEmpty
+        ? student.selectedSubjects
+        : selectedSection?.subjects ?? <String>[];
     final visibleSections = store.courses
         .where(
           (course) =>
@@ -7429,12 +7643,14 @@ class StudentDashboard extends StatelessWidget {
               (lesson) =>
                   lesson.isPublished &&
                   (student.courseId == null ||
-                      lesson.courseId == student.courseId),
+                      lesson.courseId == student.courseId) &&
+                  (allowedSubjects.isEmpty ||
+                      allowedSubjects.contains(lesson.subject)),
             )
             .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final lessonsBySubject = <String, List<Lesson>>{};
-    for (final subject in selectedSection?.subjects ?? <String>[]) {
+    for (final subject in allowedSubjects) {
       lessonsBySubject[subject] = [];
     }
     for (final lesson in visibleLessons) {
@@ -7467,7 +7683,7 @@ class StudentDashboard extends StatelessWidget {
                             leading: const Icon(Icons.book_rounded),
                             title: Text(course.title),
                             subtitle: Text(
-                              'المواد: ${course.subjects.join('، ')}',
+                              'المواد: ${allowedSubjects.join('، ')}',
                             ),
                           ),
                         )
@@ -9664,6 +9880,16 @@ String roleLabel(UserRole? role) {
     UserRole.student => 'طالب',
     null => '-',
   };
+}
+
+List<String> stringListFromDynamic(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+  return const [];
 }
 
 Color courseAccent(String title) {
