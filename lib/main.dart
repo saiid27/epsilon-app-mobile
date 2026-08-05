@@ -254,9 +254,11 @@ class Course {
     this.price = '',
     List<String>? subjects,
     Map<String, String>? subjectTeachers,
+    Map<String, String>? subjectPrices,
     this.isActive = true,
   }) : subjects = subjects ?? const ['الرياضيات', 'الفيزياء', 'الكيمياء'],
-       subjectTeachers = subjectTeachers ?? const {};
+       subjectTeachers = subjectTeachers ?? const {},
+       subjectPrices = subjectPrices ?? const {};
 
   final String id;
   final String title;
@@ -265,6 +267,7 @@ class Course {
   String price;
   List<String> subjects;
   Map<String, String> subjectTeachers;
+  Map<String, String> subjectPrices;
   bool isActive;
 }
 
@@ -1130,13 +1133,18 @@ class SchoolStore extends ChangeNotifier {
     final subjects = data['subjects'];
     final subjectDetails = data['subjectDetails'];
     final subjectTeachers = <String, String>{};
+    final subjectPrices = <String, String>{};
     if (subjectDetails is List) {
       for (final item in subjectDetails) {
         if (item is Map) {
           final name = '${item['name'] ?? ''}'.trim();
           final teacherName = '${item['teacherName'] ?? ''}'.trim();
+          final subjectPrice = '${item['price'] ?? ''}'.trim();
           if (name.isNotEmpty && teacherName.isNotEmpty) {
             subjectTeachers[name] = teacherName;
+          }
+          if (name.isNotEmpty && subjectPrice.isNotEmpty) {
+            subjectPrices[name] = subjectPrice;
           }
         }
       }
@@ -1154,6 +1162,7 @@ class SchoolStore extends ChangeNotifier {
           ? subjects.whereType<String>().toList()
           : const ['Math', 'Physique', 'Chimie'],
       subjectTeachers: subjectTeachers,
+      subjectPrices: subjectPrices,
       isActive: (data['isActive'] as bool?) ?? true,
     );
   }
@@ -1681,7 +1690,7 @@ class SchoolStore extends ChangeNotifier {
     required String classId,
     required String description,
     required String price,
-    required List<String> subjects,
+    required List<Map<String, String>> subjects,
   }) {
     if (firebaseEnabled) {
       unawaited(
@@ -1706,7 +1715,13 @@ class SchoolStore extends ChangeNotifier {
         classId: classId,
         description: description.trim(),
         price: price.trim(),
-        subjects: subjects,
+        subjects: subjects.map((subject) => subject['name'] ?? '').toList(),
+        subjectPrices: {
+          for (final subject in subjects)
+            if ((subject['name'] ?? '').trim().isNotEmpty &&
+                (subject['price'] ?? '').trim().isNotEmpty)
+              subject['name']!.trim(): subject['price']!.trim(),
+        },
       ),
     );
     notifyListeners();
@@ -5458,22 +5473,25 @@ class _StudentCourseSelectionPageState
                   padding: const EdgeInsets.only(bottom: 12),
                   child: StudentCourseCard(
                     course: course,
-                    onSelect: () {
+                    onFullCourse: () {
                       final subjects = course.subjects;
-                      if (subjects.length <= 1) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => StudentPaymentPage(
-                              name: widget.name,
-                              phone: widget.phone,
-                              password: widget.password,
-                              courseId: course.id,
-                              selectedSubjects: subjects,
-                            ),
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StudentPaymentPage(
+                            name: widget.name,
+                            phone: widget.phone,
+                            password: widget.password,
+                            courseId: course.id,
+                            selectedSubjects: subjects,
+                            subscriptionLabel: 'القسم كامل',
+                            paymentAmount: course.price.trim().isEmpty
+                                ? store.paymentAmount
+                                : course.price.trim(),
                           ),
-                        );
-                        return;
-                      }
+                        ),
+                      );
+                    },
+                    onPickSubjects: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => StudentSubjectSelectionPage(
@@ -5521,12 +5539,14 @@ class _StudentCourseSelectionPageState
 class StudentCourseCard extends StatelessWidget {
   const StudentCourseCard({
     required this.course,
-    required this.onSelect,
+    required this.onFullCourse,
+    required this.onPickSubjects,
     super.key,
   });
 
   final Course course;
-  final VoidCallback onSelect;
+  final VoidCallback onFullCourse;
+  final VoidCallback onPickSubjects;
 
   @override
   Widget build(BuildContext context) {
@@ -5540,7 +5560,7 @@ class StudentCourseCard extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        onTap: onSelect,
+        onTap: onPickSubjects,
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           padding: const EdgeInsets.all(16),
@@ -5612,7 +5632,9 @@ class StudentCourseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      course.price.trim().isEmpty ? 'متاح' : course.price,
+                      course.price.trim().isEmpty
+                          ? 'سعر القسم غير محدد'
+                          : 'القسم كامل: ${course.price}',
                       style: TextStyle(
                         color: accent,
                         fontWeight: FontWeight.w900,
@@ -5680,17 +5702,17 @@ class StudentCourseCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  course.subjectTeachers[subject]
+                                  course.subjectPrices[subject]
                                               ?.trim()
                                               .isEmpty ??
                                           true
-                                      ? 'بدون أستاذ'
-                                      : course.subjectTeachers[subject]!,
+                                      ? 'سعر غير محدد'
+                                      : course.subjectPrices[subject]!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color:
-                                        course.subjectTeachers[subject]
+                                        course.subjectPrices[subject]
                                                 ?.trim()
                                                 .isEmpty ??
                                             true
@@ -5712,30 +5734,36 @@ class StudentCourseCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      course.subjects.length > 3
-                          ? '${course.subjects.length - 3} مواد إضافية'
-                          : 'تفاصيل القسم والمواد',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: epsilonMuted,
-                        fontWeight: FontWeight.w700,
+                    child: OutlinedButton.icon(
+                      onPressed: course.subjects.isEmpty
+                          ? null
+                          : onPickSubjects,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: accent,
+                        side: BorderSide(color: accent.withValues(alpha: 0.55)),
+                        minimumSize: const Size.fromHeight(44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
                       ),
+                      icon: const Icon(Icons.tune_rounded, size: 18),
+                      label: const Text('اختيار مواد'),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  FilledButton.icon(
-                    onPressed: onSelect,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accent,
-                      minimumSize: const Size(116, 42),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(13),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: onFullCourse,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: accent,
+                        minimumSize: const Size.fromHeight(44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
                       ),
+                      icon: const Icon(Icons.done_all_rounded, size: 18),
+                      label: const Text('القسم كامل'),
                     ),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: const Text('اختيار'),
                   ),
                 ],
               ),
@@ -5807,7 +5835,7 @@ class StudentSubjectSelectionPage extends StatefulWidget {
 
 class _StudentSubjectSelectionPageState
     extends State<StudentSubjectSelectionPage> {
-  late final Set<String> selectedSubjects = widget.course.subjects.toSet();
+  late final Set<String> selectedSubjects = <String>{};
   String? error;
 
   @override
@@ -5833,6 +5861,7 @@ class _StudentSubjectSelectionPageState
                   _SubjectChoiceTile(
                     subject: subject,
                     teacherName: widget.course.subjectTeachers[subject],
+                    price: widget.course.subjectPrices[subject],
                     selected: selectedSubjects.contains(subject),
                     accent: courseAccent(widget.course.title),
                     onChanged: (value) {
@@ -5879,6 +5908,45 @@ class _StudentSubjectSelectionPageState
                       ],
                     ),
                   ),
+                if (selectedSubjects.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFDDE7FF)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.payments_rounded,
+                          color: Color(0xFF2F5BEA),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'المبلغ المتوقع',
+                            style: TextStyle(
+                              color: epsilonInk,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          selectedSubjectsAmount(
+                            widget.course,
+                            selectedSubjects,
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFF2F5BEA),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: TextStyle(color: Colors.red.shade700)),
@@ -5898,6 +5966,11 @@ class _StudentSubjectSelectionPageState
                           password: widget.password,
                           courseId: widget.course.id,
                           selectedSubjects: selectedSubjects.toList(),
+                          subscriptionLabel: 'مواد مختارة',
+                          paymentAmount: selectedSubjectsAmount(
+                            widget.course,
+                            selectedSubjects,
+                          ),
                         ),
                       ),
                     );
@@ -5921,10 +5994,12 @@ class _SubjectChoiceTile extends StatelessWidget {
     required this.accent,
     required this.onChanged,
     this.teacherName,
+    this.price,
   });
 
   final String subject;
   final String? teacherName;
+  final String? price;
   final bool selected;
   final Color accent;
   final ValueChanged<bool?> onChanged;
@@ -5932,6 +6007,7 @@ class _SubjectChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final teacher = teacherName?.trim();
+    final subjectPrice = price?.trim();
 
     return InkWell(
       onTap: () => onChanged(!selected),
@@ -5990,6 +6066,26 @@ class _SubjectChoiceTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (subjectPrice != null && subjectPrice.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  subjectPrice,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
             AnimatedScale(
               duration: const Duration(milliseconds: 180),
               scale: selected ? 1 : 0.85,
@@ -6012,6 +6108,8 @@ class StudentPaymentPage extends StatefulWidget {
     required this.password,
     required this.courseId,
     required this.selectedSubjects,
+    required this.subscriptionLabel,
+    required this.paymentAmount,
     super.key,
   });
 
@@ -6020,6 +6118,8 @@ class StudentPaymentPage extends StatefulWidget {
   final String password;
   final String courseId;
   final List<String> selectedSubjects;
+  final String subscriptionLabel;
+  final String paymentAmount;
 
   @override
   State<StudentPaymentPage> createState() => _StudentPaymentPageState();
@@ -6109,9 +6209,8 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final course = store.courseById(widget.courseId);
-    final coursePrice = course?.price.trim() ?? '';
-    final paymentAmount = coursePrice.isNotEmpty
-        ? coursePrice
+    final paymentAmount = widget.paymentAmount.trim().isNotEmpty
+        ? widget.paymentAmount.trim()
         : store.paymentAmount;
 
     return Scaffold(
@@ -6142,6 +6241,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
                 InfoRow(label: 'الاسم', value: widget.name),
                 InfoRow(label: 'رقم الهاتف', value: widget.phone),
                 InfoRow(label: 'القسم', value: course?.title ?? 'غير محدد'),
+                InfoRow(label: 'نوع الاشتراك', value: widget.subscriptionLabel),
                 InfoRow(
                   label: 'المواد',
                   value: widget.selectedSubjects.join('، '),
@@ -8269,7 +8369,7 @@ class _CreateCourseFormState extends State<CreateCourseForm> {
   final descriptionController = TextEditingController();
   final priceController = TextEditingController();
   final subjectsController = TextEditingController(
-    text: 'الرياضيات، الفيزياء، الكيمياء',
+    text: 'الرياضيات:1500، الفيزياء:1500، الكيمياء:1200',
   );
 
   @override
@@ -8318,7 +8418,7 @@ class _CreateCourseFormState extends State<CreateCourseForm> {
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'مواد القسم',
-              hintText: 'مثال: رياضيات، فيزياء، كيمياء',
+              hintText: 'مثال: رياضيات:1500، فيزياء:1500، كيمياء:1200',
             ),
           ),
           const SizedBox(height: 12),
@@ -8336,7 +8436,7 @@ class _CreateCourseFormState extends State<CreateCourseForm> {
                       ? 'دروس وتمارين وملخصات منظمة للطلاب'
                       : descriptionController.text,
                   price: priceController.text,
-                  subjects: parseSubjects(subjectsController.text),
+                  subjects: parseSubjectInputs(subjectsController.text),
                 );
                 titleController.clear();
                 descriptionController.clear();
@@ -10315,15 +10415,82 @@ String courseTitleLine(String title, String? level) {
   return title;
 }
 
-List<String> parseSubjects(String raw) {
+List<Map<String, String>> parseSubjectInputs(String raw) {
   final subjects = raw
       .split(RegExp(r'[,،\n]'))
-      .map((subject) => subject.trim())
-      .where((subject) => subject.isNotEmpty)
-      .toSet()
+      .map((subject) {
+        final parts = subject.split(RegExp(r'[:：=]'));
+        final name = parts.first.trim();
+        final price = parts.length > 1 ? parts.sublist(1).join(':').trim() : '';
+        return {'name': name, 'price': price};
+      })
+      .where((subject) => subject['name']!.isNotEmpty)
       .toList();
 
-  return subjects.isEmpty ? ['مادة عامة'] : subjects;
+  final seen = <String>{};
+  final uniqueSubjects = <Map<String, String>>[];
+  for (final subject in subjects) {
+    final name = subject['name']!;
+    if (seen.add(name)) {
+      uniqueSubjects.add(subject);
+    }
+  }
+
+  return uniqueSubjects.isEmpty
+      ? [
+          {'name': 'مادة عامة', 'price': ''},
+        ]
+      : uniqueSubjects;
+}
+
+String selectedSubjectsAmount(
+  Course course,
+  Iterable<String> selectedSubjects,
+) {
+  final selected = selectedSubjects.toList();
+  if (selected.isEmpty) {
+    return 'غير محدد';
+  }
+
+  final prices = selected
+      .map((subject) => course.subjectPrices[subject]?.trim() ?? '')
+      .toList();
+  if (prices.any((price) => price.isEmpty)) {
+    return selected.length == 1 ? 'سعر المادة غير محدد' : 'بعض المواد بدون سعر';
+  }
+
+  final numericPrices = prices.map(priceNumberFromText).toList();
+  if (numericPrices.every((price) => price != null)) {
+    final total = numericPrices.fold<double>(
+      0,
+      (runningTotal, price) => runningTotal + price!,
+    );
+    final suffix = priceSuffix(prices.first);
+    final totalText = total == total.roundToDouble()
+        ? total.round().toString()
+        : total.toStringAsFixed(2);
+    return suffix.isEmpty ? totalText : '$totalText $suffix';
+  }
+
+  if (prices.length == 1) {
+    return prices.first;
+  }
+  return 'حسب أسعار المواد المختارة';
+}
+
+double? priceNumberFromText(String value) {
+  final normalized = value
+      .replaceAll('٬', '')
+      .replaceAll(',', '.')
+      .replaceAll(RegExp(r'[^0-9.]'), '');
+  if (normalized.isEmpty) {
+    return null;
+  }
+  return double.tryParse(normalized);
+}
+
+String priceSuffix(String value) {
+  return value.replaceAll(RegExp(r'[0-9\s.,٬]+'), '').trim();
 }
 
 String toVideoViewerUrl(String url) {

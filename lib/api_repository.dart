@@ -174,7 +174,7 @@ class ApiRepository {
     required String classId,
     required String description,
     required String price,
-    required List<String> subjects,
+    required List<Map<String, String>> subjects,
   }) async {
     await post('/api/courses', {
       'title': title,
