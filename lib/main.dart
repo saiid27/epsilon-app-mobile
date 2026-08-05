@@ -414,6 +414,20 @@ class OfferTextSection {
   bool get shouldShow => active && body.trim().isNotEmpty;
 }
 
+class PaymentMethod {
+  const PaymentMethod({
+    required this.id,
+    required this.name,
+    required this.accountNumber,
+    this.imageUrl = '',
+  });
+
+  final String id;
+  final String name;
+  final String accountNumber;
+  final String imageUrl;
+}
+
 class SchoolStore extends ChangeNotifier {
   SchoolStore({required this.firebaseEnabled}) {
     unawaited(_loadReadNotifications());
@@ -440,6 +454,7 @@ class SchoolStore extends ChangeNotifier {
   final List<Lesson> lessons = [];
   final List<GuestContentItem> guestVideos = [];
   final List<GuestContentItem> archiveFiles = [];
+  final List<PaymentMethod> paymentMethods = [];
   final List<AppUser> users = [];
   final List<AppNotification> notifications = [];
   final Set<String> readNotificationIds = {};
@@ -690,8 +705,43 @@ class SchoolStore extends ChangeNotifier {
       if (amount is String && amount.trim().isNotEmpty) {
         paymentAmount = amount;
       }
+      final methods = settings['paymentMethods'];
+      paymentMethods
+        ..clear()
+        ..addAll(_paymentMethodsFromApi(methods));
+      if (paymentMethods.isEmpty && paymentNumber.trim().isNotEmpty) {
+        paymentMethods.add(
+          PaymentMethod(
+            id: 'default',
+            name: 'طريقة الدفع المتاحة',
+            accountNumber: paymentNumber,
+          ),
+        );
+      }
       notifyListeners();
     }
+  }
+
+  List<PaymentMethod> _paymentMethodsFromApi(Object? data) {
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<Map>()
+        .map((item) {
+          return PaymentMethod(
+            id: '${item['id'] ?? ''}',
+            name: '${item['name'] ?? 'طريقة دفع'}',
+            accountNumber:
+                '${item['accountNumber'] ?? item['account_number'] ?? ''}',
+            imageUrl: '${item['imageUrl'] ?? item['image_url'] ?? ''}',
+          );
+        })
+        .where((method) {
+          return method.name.trim().isNotEmpty &&
+              method.accountNumber.trim().isNotEmpty;
+        })
+        .toList();
   }
 
   Future<void> _loadSignedInApiData() async {
@@ -1756,6 +1806,54 @@ class SchoolStore extends ChangeNotifier {
       return;
     }
     paymentAmount = value.trim();
+    notifyListeners();
+  }
+
+  void createPaymentMethod({
+    required String name,
+    required String accountNumber,
+    required String imageUrl,
+  }) {
+    final methodName = name.trim();
+    final methodNumber = accountNumber.trim();
+    if (methodName.isEmpty || methodNumber.isEmpty) {
+      return;
+    }
+    if (firebaseEnabled) {
+      unawaited(
+        (_repository as ApiRepository)
+            .createPaymentMethod(
+              name: methodName,
+              accountNumber: methodNumber,
+              imageUrl: imageUrl.trim(),
+            )
+            .then((data) => _applySettingsFromApi(data['settings']))
+            .catchError(_rememberError),
+      );
+      return;
+    }
+    paymentMethods.add(
+      PaymentMethod(
+        id: 'payment-${DateTime.now().microsecondsSinceEpoch}',
+        name: methodName,
+        accountNumber: methodNumber,
+        imageUrl: imageUrl.trim(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  void deletePaymentMethod(PaymentMethod method) {
+    if (firebaseEnabled) {
+      unawaited(
+        (_repository as ApiRepository)
+            .deletePaymentMethod(method.id)
+            .then((data) => _applySettingsFromApi(data['settings']))
+            .catchError(_rememberError),
+      );
+      return;
+    }
+    paymentMethods.removeWhere((item) => item.id == method.id);
     notifyListeners();
   }
 
@@ -6132,6 +6230,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
   late final AnimationController attentionController;
   late final Animation<double> pulseAnimation;
   XFile? proofImage;
+  String? selectedPaymentMethodId;
   bool submitted = false;
   String? error;
 
@@ -6212,6 +6311,22 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
     final paymentAmount = widget.paymentAmount.trim().isNotEmpty
         ? widget.paymentAmount.trim()
         : store.paymentAmount;
+    final availablePaymentMethods = store.paymentMethods.isEmpty
+        ? [
+            PaymentMethod(
+              id: 'default',
+              name: 'طريقة الدفع المتاحة',
+              accountNumber: store.paymentNumber,
+            ),
+          ]
+        : store.paymentMethods;
+    if (selectedPaymentMethodId == null && availablePaymentMethods.isNotEmpty) {
+      selectedPaymentMethodId = availablePaymentMethods.first.id;
+    }
+    final selectedPaymentMethod = availablePaymentMethods.firstWhere(
+      (method) => method.id == selectedPaymentMethodId,
+      orElse: () => availablePaymentMethods.first,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FF),
@@ -6227,9 +6342,32 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
           ),
           const SizedBox(height: 16),
           PaymentAttentionCard(
-            paymentNumber: store.paymentNumber,
+            paymentMethod: selectedPaymentMethod,
             paymentAmount: paymentAmount,
             pulseAnimation: pulseAnimation,
+          ),
+          const SizedBox(height: 16),
+          SectionCard(
+            title: 'طرق الدفع المتوفرة',
+            icon: Icons.account_balance_wallet_rounded,
+            child: Column(
+              children: [
+                for (final method in availablePaymentMethods) ...[
+                  PaymentMethodTile(
+                    method: method,
+                    selected: method.id == selectedPaymentMethod.id,
+                    onTap: submitted
+                        ? null
+                        : () {
+                            setState(() {
+                              selectedPaymentMethodId = method.id;
+                            });
+                          },
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           SectionCard(
@@ -6318,13 +6456,13 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
 
 class PaymentAttentionCard extends StatelessWidget {
   const PaymentAttentionCard({
-    required this.paymentNumber,
+    required this.paymentMethod,
     required this.paymentAmount,
     required this.pulseAnimation,
     super.key,
   });
 
-  final String paymentNumber;
+  final PaymentMethod paymentMethod;
   final String paymentAmount;
   final Animation<double> pulseAnimation;
 
@@ -6355,11 +6493,22 @@ class PaymentAttentionCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Colors.white24),
               ),
-              child: const Icon(
-                Icons.payments_rounded,
-                color: Colors.white,
-                size: 34,
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: paymentMethod.imageUrl.trim().isEmpty
+                  ? const Icon(
+                      Icons.payments_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    )
+                  : Image.network(
+                      paymentMethod.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.payments_rounded,
+                        color: Colors.white,
+                        size: 34,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 14),
@@ -6388,7 +6537,7 @@ class PaymentAttentionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'رقم الدفع',
+                  'طريقة الدفع',
                   style: TextStyle(
                     color: Color(0xFFE8EEFF),
                     fontWeight: FontWeight.w700,
@@ -6396,10 +6545,22 @@ class PaymentAttentionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 SelectableText(
-                  paymentNumber.isEmpty ? 'لم تضفه الإدارة بعد' : paymentNumber,
+                  paymentMethod.name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  paymentMethod.accountNumber.isEmpty
+                      ? 'لم تضفه الإدارة بعد'
+                      : paymentMethod.accountNumber,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
@@ -6414,6 +6575,114 @@ class PaymentAttentionCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class PaymentMethodTile extends StatelessWidget {
+  const PaymentMethodTile({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final PaymentMethod method;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF2F5BEA).withValues(alpha: 0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? const Color(0xFF2F5BEA) : const Color(0xFFE1E8F8),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            PaymentMethodLogo(method: method, size: 48),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    method.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: epsilonInk,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    method.accountNumber.isEmpty
+                        ? 'لم تضفه الإدارة بعد'
+                        : method.accountNumber,
+                    style: const TextStyle(
+                      color: epsilonMuted,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: selected
+                  ? const Color(0xFF2F5BEA)
+                  : const Color(0xFFCBD5E1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PaymentMethodLogo extends StatelessWidget {
+  const PaymentMethodLogo({required this.method, this.size = 42, super.key});
+
+  final PaymentMethod method;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = method.imageUrl.trim();
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF1FF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl.isEmpty
+          ? const Icon(
+              Icons.account_balance_wallet_rounded,
+              color: Color(0xFF2F5BEA),
+            )
+          : Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: Color(0xFF2F5BEA),
+              ),
+            ),
     );
   }
 }
@@ -8462,6 +8731,9 @@ class PaymentNumberForm extends StatefulWidget {
 class _PaymentNumberFormState extends State<PaymentNumberForm> {
   final numberController = TextEditingController();
   final amountController = TextEditingController();
+  final methodNameController = TextEditingController();
+  final methodNumberController = TextEditingController();
+  final methodImageController = TextEditingController();
   bool initialized = false;
 
   @override
@@ -8478,6 +8750,9 @@ class _PaymentNumberFormState extends State<PaymentNumberForm> {
   void dispose() {
     numberController.dispose();
     amountController.dispose();
+    methodNameController.dispose();
+    methodNumberController.dispose();
+    methodImageController.dispose();
     super.dispose();
   }
 
@@ -8520,6 +8795,108 @@ class _PaymentNumberFormState extends State<PaymentNumberForm> {
               label: const Text('حفظ إعدادات الدفع'),
             ),
           ),
+          const SizedBox(height: 18),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text(
+            'طرق الدفع المتوفرة',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: methodNameController,
+            decoration: const InputDecoration(
+              labelText: 'اسم الطريقة',
+              hintText: 'مثال: بنكيلي أو مصرفي',
+              prefixIcon: Icon(Icons.account_balance_wallet_rounded),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: methodNumberController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'رقم الحساب أو الهاتف',
+              prefixIcon: Icon(Icons.numbers_rounded),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: methodImageController,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'رابط صورة الشعار',
+              hintText: 'اختياري',
+              prefixIcon: Icon(Icons.image_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                store.createPaymentMethod(
+                  name: methodNameController.text,
+                  accountNumber: methodNumberController.text,
+                  imageUrl: methodImageController.text,
+                );
+                methodNameController.clear();
+                methodNumberController.clear();
+                methodImageController.clear();
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('إضافة طريقة دفع'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (store.paymentMethods.isEmpty)
+            const EmptyState(text: 'لم تتم إضافة طرق دفع بعد.')
+          else
+            for (final method in store.paymentMethods) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFF),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE1E8F8)),
+                ),
+                child: Row(
+                  children: [
+                    PaymentMethodLogo(method: method, size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            method.name,
+                            style: const TextStyle(
+                              color: epsilonInk,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          Text(
+                            method.accountNumber,
+                            style: const TextStyle(
+                              color: epsilonMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'حذف',
+                      onPressed: () => store.deletePaymentMethod(method),
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ],
+                ),
+              ),
+            ],
         ],
       ),
     );

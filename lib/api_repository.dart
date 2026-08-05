@@ -140,6 +140,22 @@ class ApiRepository {
     return patch('/api/settings', body);
   }
 
+  Future<Map<String, dynamic>> createPaymentMethod({
+    required String name,
+    required String accountNumber,
+    required String imageUrl,
+  }) {
+    return post('/api/payment-methods', {
+      'name': name,
+      'accountNumber': accountNumber,
+      'imageUrl': imageUrl,
+    });
+  }
+
+  Future<Map<String, dynamic>> deletePaymentMethod(String id) {
+    return delete('/api/payment-methods/$id');
+  }
+
   Future<Map<String, dynamic>> createUser({
     required String name,
     required String phone,
