@@ -253,8 +253,10 @@ class Course {
     this.description = 'دروس وتمارين وملخصات منظمة للطلاب',
     this.price = '',
     List<String>? subjects,
+    Map<String, String>? subjectTeachers,
     this.isActive = true,
-  }) : subjects = subjects ?? const ['الرياضيات', 'الفيزياء', 'الكيمياء'];
+  }) : subjects = subjects ?? const ['الرياضيات', 'الفيزياء', 'الكيمياء'],
+       subjectTeachers = subjectTeachers ?? const {};
 
   final String id;
   final String title;
@@ -262,6 +264,7 @@ class Course {
   String description;
   String price;
   List<String> subjects;
+  Map<String, String> subjectTeachers;
   bool isActive;
 }
 
@@ -1125,6 +1128,19 @@ class SchoolStore extends ChangeNotifier {
 
   Course _courseFromApi(Map<String, dynamic> data) {
     final subjects = data['subjects'];
+    final subjectDetails = data['subjectDetails'];
+    final subjectTeachers = <String, String>{};
+    if (subjectDetails is List) {
+      for (final item in subjectDetails) {
+        if (item is Map) {
+          final name = '${item['name'] ?? ''}'.trim();
+          final teacherName = '${item['teacherName'] ?? ''}'.trim();
+          if (name.isNotEmpty && teacherName.isNotEmpty) {
+            subjectTeachers[name] = teacherName;
+          }
+        }
+      }
+    }
     return Course(
       id: '${data['id'] ?? data['code'] ?? ''}',
       title: (data['title'] as String?) ?? (data['name'] as String?) ?? 'قسم',
@@ -1137,6 +1153,7 @@ class SchoolStore extends ChangeNotifier {
       subjects: subjects is List
           ? subjects.whereType<String>().toList()
           : const ['Math', 'Physique', 'Chimie'],
+      subjectTeachers: subjectTeachers,
       isActive: (data['isActive'] as bool?) ?? true,
     );
   }
@@ -5296,7 +5313,7 @@ class _RegisterCardState extends State<RegisterCard> {
   }
 }
 
-class StudentCourseSelectionPage extends StatelessWidget {
+class StudentCourseSelectionPage extends StatefulWidget {
   const StudentCourseSelectionPage({
     required this.name,
     required this.phone,
@@ -5309,8 +5326,28 @@ class StudentCourseSelectionPage extends StatelessWidget {
   final String password;
 
   @override
+  State<StudentCourseSelectionPage> createState() =>
+      _StudentCourseSelectionPageState();
+}
+
+class _StudentCourseSelectionPageState
+    extends State<StudentCourseSelectionPage> {
+  String query = '';
+
+  @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final courses = store.courses.where((course) {
+      final normalizedQuery = query.trim().toLowerCase();
+      if (normalizedQuery.isEmpty) return true;
+      final haystack = [
+        course.title,
+        course.description,
+        ...course.subjects,
+        ...course.subjectTeachers.values,
+      ].join(' ').toLowerCase();
+      return haystack.contains(normalizedQuery);
+    }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FF),
@@ -5328,26 +5365,59 @@ class StudentCourseSelectionPage extends StatelessWidget {
           'اختر قسمك',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'بحث',
-            onPressed: () {},
-            icon: const Icon(Icons.search_rounded),
-          ),
-        ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
         children: [
-          const Text(
-            'اختر القسم الذي تريد التسجيل به للبدء في رحلتك التعليمية',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w600,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFDDE7FF)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2F5BEA).withValues(alpha: 0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'الأقسام التي تضيفها الإدارة تظهر هنا مباشرة من الموقع أو التطبيق.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: epsilonInk,
+                    fontWeight: FontWeight.w900,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (value) => setState(() => query = value),
+                  textDirection: TextDirection.rtl,
+                  decoration: InputDecoration(
+                    hintText: 'ابحث باسم القسم أو المادة أو الأستاذ',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: const Color(0xFFF4F7FF),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Row(
             textDirection: TextDirection.rtl,
             children: [
@@ -5375,50 +5445,49 @@ class StudentCourseSelectionPage extends StatelessWidget {
               icon: Icons.menu_book_rounded,
               child: EmptyState(text: 'انتظر الإدارة حتى تضيف قسما متاحا.'),
             )
+          else if (courses.isEmpty)
+            const SectionCard(
+              title: 'لا توجد نتائج',
+              icon: Icons.search_off_rounded,
+              child: EmptyState(text: 'جرّب كلمة بحث مختلفة.'),
+            )
           else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: store.courses.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.82,
-              ),
-              itemBuilder: (context, index) {
-                final course = store.courses[index];
-                return StudentCourseCard(
-                  course: course,
-                  onSelect: () {
-                    final subjects = course.subjects;
-                    if (subjects.length <= 1) {
+            Column(
+              children: courses.map((course) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: StudentCourseCard(
+                    course: course,
+                    onSelect: () {
+                      final subjects = course.subjects;
+                      if (subjects.length <= 1) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => StudentPaymentPage(
+                              name: widget.name,
+                              phone: widget.phone,
+                              password: widget.password,
+                              courseId: course.id,
+                              selectedSubjects: subjects,
+                            ),
+                          ),
+                        );
+                        return;
+                      }
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => StudentPaymentPage(
-                            name: name,
-                            phone: phone,
-                            password: password,
-                            courseId: course.id,
-                            selectedSubjects: subjects,
+                          builder: (_) => StudentSubjectSelectionPage(
+                            name: widget.name,
+                            phone: widget.phone,
+                            password: widget.password,
+                            course: course,
                           ),
                         ),
                       );
-                      return;
-                    }
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => StudentSubjectSelectionPage(
-                          name: name,
-                          phone: phone,
-                          password: password,
-                          course: course,
-                        ),
-                      ),
-                    );
-                  },
+                    },
+                  ),
                 );
-              },
+              }).toList(),
             ),
           const SizedBox(height: 14),
           Container(
@@ -5464,116 +5533,251 @@ class StudentCourseCard extends StatelessWidget {
     final store = StoreScope.of(context);
     final schoolClass = store.classById(course.classId);
     final accent = courseAccent(course.title);
-    final icon = courseIcon(course.title);
+    final teacherCount = course.subjectTeachers.values.toSet().length;
+    final subtitle = courseTitleLine(course.title, schoolClass?.level);
 
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8EEFF)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1F2937).withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          PositionedDirectional(
-            top: -1,
-            end: 2,
-            child: Icon(Icons.bookmark_rounded, color: accent, size: 22),
-          ),
-          PositionedDirectional(
-            top: 18,
-            end: 2,
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onSelect,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accent.withValues(alpha: 0.22)),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.07),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
               ),
-              child: Icon(icon, color: accent, size: 38),
-            ),
+            ],
           ),
-          Positioned.fill(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 70, top: 10),
-                  child: Text(
-                    courseShortTitle(course.title),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          course.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: epsilonInk,
+                            fontWeight: FontWeight.w800,
+                            height: 1.25,
+                          ),
+                        ),
+                        if (course.description.trim().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            course.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: epsilonMuted,
+                              height: 1.35,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 7),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 70),
-                  child: Text(
-                    courseTitleLine(course.title, schoolClass?.level),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF111827),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      height: 1.25,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  course.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
-                    height: 1.35,
-                    fontSize: 10.5,
-                  ),
-                ),
-                if (course.price.trim().isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: StatusPill(text: course.price),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      course.price.trim().isEmpty ? 'متاح' : course.price,
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
-                const Spacer(),
-                SizedBox(
-                  height: 34,
-                  child: OutlinedButton.icon(
-                    onPressed: onSelect,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: accent,
-                      side: BorderSide(color: accent.withValues(alpha: 0.55)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'اختر القسم',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InfoChip(
+                    icon: Icons.subject_rounded,
+                    text: '${course.subjects.length} مواد',
+                    color: accent,
+                  ),
+                  InfoChip(
+                    icon: Icons.person_rounded,
+                    text: teacherCount == 0
+                        ? 'بانتظار أستاذ'
+                        : '$teacherCount أساتذة',
+                    color: epsilonTeal,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (course.subjects.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE4EBFB)),
+                  ),
+                  child: Column(
+                    children: [
+                      for (final subject in course.subjects.take(3))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 7),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  subject,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: epsilonInk,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  course.subjectTeachers[subject]
+                                              ?.trim()
+                                              .isEmpty ??
+                                          true
+                                      ? 'بدون أستاذ'
+                                      : course.subjectTeachers[subject]!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color:
+                                        course.subjectTeachers[subject]
+                                                ?.trim()
+                                                .isEmpty ??
+                                            true
+                                        ? epsilonMuted
+                                        : accent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      course.subjects.length > 3
+                          ? '${course.subjects.length - 3} مواد إضافية'
+                          : 'تفاصيل القسم والمواد',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: epsilonMuted,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  FilledButton.icon(
+                    onPressed: onSelect,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      minimumSize: const Size(116, 42),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                    label: const Text('اختيار'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class InfoChip extends StatelessWidget {
+  const InfoChip({
+    required this.icon,
+    required this.text,
+    required this.color,
+    super.key,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -5625,9 +5829,12 @@ class _StudentSubjectSelectionPageState
             icon: Icons.subject_rounded,
             child: Column(
               children: [
-                for (final subject in widget.course.subjects)
-                  CheckboxListTile(
-                    value: selectedSubjects.contains(subject),
+                for (final subject in widget.course.subjects) ...[
+                  _SubjectChoiceTile(
+                    subject: subject,
+                    teacherName: widget.course.subjectTeachers[subject],
+                    selected: selectedSubjects.contains(subject),
+                    accent: courseAccent(widget.course.title),
                     onChanged: (value) {
                       setState(() {
                         if (value == true) {
@@ -5638,12 +5845,39 @@ class _StudentSubjectSelectionPageState
                         error = null;
                       });
                     },
-                    title: Text(
-                      subject,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (widget.course.subjects.isEmpty)
+                  const EmptyState(text: 'لم تتم إضافة مواد لهذا القسم بعد.'),
+                if (widget.course.subjects.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: courseAccent(
+                        widget.course.title,
+                      ).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.touch_app_rounded,
+                          color: courseAccent(widget.course.title),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'يمكنك اختيار مادة واحدة أو أكثر حسب حاجتك.',
+                            style: TextStyle(
+                              color: courseAccent(widget.course.title),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
@@ -5675,6 +5909,97 @@ class _StudentSubjectSelectionPageState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SubjectChoiceTile extends StatelessWidget {
+  const _SubjectChoiceTile({
+    required this.subject,
+    required this.selected,
+    required this.accent,
+    required this.onChanged,
+    this.teacherName,
+  });
+
+  final String subject;
+  final String? teacherName;
+  final bool selected;
+  final Color accent;
+  final ValueChanged<bool?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final teacher = teacherName?.trim();
+
+    return InkWell(
+      onTap: () => onChanged(!selected),
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.09) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? accent : const Color(0xFFE1E8F8),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Checkbox(
+              value: selected,
+              activeColor: accent,
+              onChanged: onChanged,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: epsilonInk,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    teacher == null || teacher.isEmpty
+                        ? 'لم يتم تعيين أستاذ بعد'
+                        : 'الأستاذ: $teacher',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: teacher == null || teacher.isEmpty
+                          ? epsilonMuted
+                          : accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedScale(
+              duration: const Duration(milliseconds: 180),
+              scale: selected ? 1 : 0.85,
+              child: Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                color: selected ? accent : const Color(0xFFCBD5E1),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
