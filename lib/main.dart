@@ -2674,197 +2674,233 @@ class _AuthScreenState extends State<AuthScreen>
       backgroundColor: epsilonSoft,
       body: EpsilonBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 18),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 18),
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 270),
-                        child: AspectRatio(
-                          aspectRatio: 1280 / 840,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.asset(
-                              'assets/onboarding/epsilon_logo.jpeg',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(40, 20, 40, 28),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (!widget.firebaseStatus.isReady) ...[
-                            FirebaseSetupBanner(
-                              message:
-                                  widget.firebaseStatus.errorMessage ??
-                                  'Firebase غير متصل حاليًا.',
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          registerMode
-                              ? const RegisterCard()
-                              : const LoginCard(primaryColor: loginAccent),
-                          const SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                registerMode
-                                    ? 'لديك حساب بالفعل؟'
-                                    : 'ليس لديك حساب؟',
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() => registerMode = !registerMode);
-                                },
-                                child: Text(
-                                  registerMode ? 'تسجيل الدخول' : 'إنشاء حساب',
-                                  style: const TextStyle(
-                                    color: loginAccent,
-                                    fontWeight: FontWeight.w800,
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 270),
+                              child: AspectRatio(
+                                aspectRatio: 1280 / 840,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.asset(
+                                    'assets/onboarding/epsilon_logo.jpeg',
+                                    fit: BoxFit.contain,
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                          if (!registerMode)
-                            AnimatedBuilder(
-                              animation: _nationalResultsButtonController,
-                              builder: (context, child) {
-                                final progress =
-                                    _nationalResultsButtonController.value;
-                                final pulse = sin(progress * pi * 2);
-                                final scale = 1 + (pulse.clamp(0, 1) * 0.018);
-                                final glowOpacity =
-                                    0.20 + (pulse.clamp(0, 1) * 0.18);
-
-                                return Transform.scale(
-                                  scale: scale,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(22),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Color.fromRGBO(
-                                            16,
-                                            185,
-                                            129,
-                                            glowOpacity,
-                                          ),
-                                          blurRadius: 22,
-                                          spreadRadius: 1.5,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(40, 20, 40, 28),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (!widget.firebaseStatus.isReady) ...[
+                                  FirebaseSetupBanner(
+                                    message:
+                                        widget.firebaseStatus.errorMessage ??
+                                        'Firebase غير متصل حاليًا.',
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                                registerMode
+                                    ? const RegisterCard()
+                                    : const LoginCard(
+                                        primaryColor: loginAccent,
+                                      ),
+                                const SizedBox(height: 18),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      registerMode
+                                          ? 'لديك حساب بالفعل؟'
+                                          : 'ليس لديك حساب؟',
+                                      style: const TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: DecoratedBox(
-                                              decoration: const BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    Color(0xFF10B981),
-                                                    Color(0xFF059669),
-                                                    Color(0xFF16A34A),
-                                                  ],
-                                                ),
-                                              ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(
+                                          () => registerMode = !registerMode,
+                                        );
+                                      },
+                                      child: Text(
+                                        registerMode
+                                            ? 'تسجيل الدخول'
+                                            : 'إنشاء حساب',
+                                        style: const TextStyle(
+                                          color: loginAccent,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (!registerMode)
+                                  AnimatedBuilder(
+                                    animation: _nationalResultsButtonController,
+                                    builder: (context, child) {
+                                      final progress =
+                                          _nationalResultsButtonController
+                                              .value;
+                                      final pulse = sin(progress * pi * 2);
+                                      final scale =
+                                          1 + (pulse.clamp(0, 1) * 0.018);
+                                      final glowOpacity =
+                                          0.20 + (pulse.clamp(0, 1) * 0.18);
+
+                                      return Transform.scale(
+                                        scale: scale,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              22,
                                             ),
-                                          ),
-                                          Positioned.fill(
-                                            child: FractionalTranslation(
-                                              translation: Offset(
-                                                (progress * 2.2) - 1.1,
-                                                0,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Color.fromRGBO(
+                                                  16,
+                                                  185,
+                                                  129,
+                                                  glowOpacity,
+                                                ),
+                                                blurRadius: 22,
+                                                spreadRadius: 1.5,
+                                                offset: const Offset(0, 8),
                                               ),
-                                              child: Align(
-                                                alignment: Alignment.center,
-                                                child: Container(
-                                                  width: 82,
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: [
-                                                        Color.fromRGBO(
-                                                          255,
-                                                          255,
-                                                          255,
-                                                          0,
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
+                                            child: Stack(
+                                              children: [
+                                                Positioned.fill(
+                                                  child: DecoratedBox(
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          gradient:
+                                                              LinearGradient(
+                                                                colors: [
+                                                                  Color(
+                                                                    0xFF10B981,
+                                                                  ),
+                                                                  Color(
+                                                                    0xFF059669,
+                                                                  ),
+                                                                  Color(
+                                                                    0xFF16A34A,
+                                                                  ),
+                                                                ],
+                                                              ),
                                                         ),
-                                                        Color.fromRGBO(
-                                                          255,
-                                                          255,
-                                                          255,
-                                                          0.24,
+                                                  ),
+                                                ),
+                                                Positioned.fill(
+                                                  child: FractionalTranslation(
+                                                    translation: Offset(
+                                                      (progress * 2.2) - 1.1,
+                                                      0,
+                                                    ),
+                                                    child: Align(
+                                                      alignment:
+                                                          Alignment.center,
+                                                      child: Container(
+                                                        width: 82,
+                                                        decoration: BoxDecoration(
+                                                          gradient: LinearGradient(
+                                                            colors: [
+                                                              Color.fromRGBO(
+                                                                255,
+                                                                255,
+                                                                255,
+                                                                0,
+                                                              ),
+                                                              Color.fromRGBO(
+                                                                255,
+                                                                255,
+                                                                255,
+                                                                0.24,
+                                                              ),
+                                                              Color.fromRGBO(
+                                                                255,
+                                                                255,
+                                                                255,
+                                                                0,
+                                                              ),
+                                                            ],
+                                                          ),
                                                         ),
-                                                        Color.fromRGBO(
-                                                          255,
-                                                          255,
-                                                          255,
-                                                          0,
-                                                        ),
-                                                      ],
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
+                                                child!,
+                                              ],
                                             ),
                                           ),
-                                          child!,
-                                        ],
+                                        ),
+                                      );
+                                    },
+                                    child: FilledButton.icon(
+                                      onPressed: () =>
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const NationalResultsPage(),
+                                            ),
+                                          ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        foregroundColor: Colors.white,
+                                        shadowColor: Colors.transparent,
+                                        minimumSize: const Size.fromHeight(58),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.emoji_events_rounded,
+                                      ),
+                                      label: const Text(
+                                        'نتائج المسابقات الوطنية',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                              child: FilledButton.icon(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const NationalResultsPage(),
-                                  ),
-                                ),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
-                                  shadowColor: Colors.transparent,
-                                  minimumSize: const Size.fromHeight(58),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.emoji_events_rounded),
-                                label: const Text(
-                                  'نتائج المسابقات الوطنية',
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                              ),
+                                const AuthFooterLinks(),
+                                const SizedBox(height: 24),
+                                const DeveloperCredit(),
+                              ],
                             ),
-                          const AuthFooterLinks(),
-                          const SizedBox(height: 24),
-                          const DeveloperCredit(),
+                          ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
