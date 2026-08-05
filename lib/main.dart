@@ -3674,52 +3674,54 @@ class NationalResultsPage extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final contentWidth = min(constraints.maxWidth - 32, 420.0);
-          final tileSize = min((contentWidth - 24) / 3, 124.0);
+          final tileWidth = min((contentWidth - 12) / 2, 204.0);
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: max(0, constraints.maxHeight - 42),
+                  minHeight: max(0, constraints.maxHeight - 32),
                   maxWidth: 420,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const ResultsTopWidget(),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     const ResultsOffersSection(),
-                    const SizedBox(height: 78),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
                       children: [
                         NationalResultButton(
                           title: 'كونكور',
                           examType: 'concours',
                           icon: Icons.school_rounded,
-                          size: tileSize,
+                          color: const Color(0xFF2563EB),
+                          width: tileWidth,
                         ),
-                        const SizedBox(width: 12),
                         NationalResultButton(
                           title: 'ابريفة',
                           examType: 'brevet',
                           icon: Icons.menu_book_rounded,
-                          size: tileSize,
+                          color: const Color(0xFF10B981),
+                          width: tileWidth,
                         ),
-                        const SizedBox(width: 12),
                         NationalResultButton(
                           title: 'الباكالوريا الدورة الأولى',
                           examType: 'bac-first',
                           icon: Icons.workspace_premium_rounded,
-                          size: tileSize,
+                          color: const Color(0xFFF97316),
+                          width: contentWidth,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 34),
+                    const SizedBox(height: 18),
                     const ResultsTextSection(),
-                    const SizedBox(height: 72),
+                    const SizedBox(height: 18),
                     FilledButton.icon(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -3740,7 +3742,7 @@ class NationalResultsPage extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     const Text(
                       'epsilon | dev. med said mohameden',
                       textAlign: TextAlign.center,
@@ -3767,17 +3769,39 @@ class ResultsTopWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2F5BEA),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2457D6), Color(0xFF2F5BEA)],
+        ),
         borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2F5BEA).withValues(alpha: 0.18),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
-      child: const Row(
+      child: Row(
         textDirection: TextDirection.rtl,
         children: [
-          Icon(Icons.fact_check_rounded, color: Colors.white, size: 34),
-          SizedBox(width: 12),
-          Expanded(
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: const Icon(
+              Icons.fact_check_rounded,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -3789,11 +3813,11 @@ class ResultsTopWidget extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 5),
                 Text(
-                  'اختر نوع المسابقة للاطلاع على النتائج',
+                  'اختر المسابقة وابحث بالرقم أو الاسم',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Color(0xFFE8EEFF),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -3895,8 +3919,9 @@ class _ResultsOffersSectionState extends State<ResultsOffersSection> {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
+          SizedBox(
+            height: 156,
+            width: double.infinity,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 450),
               child: Image.network(
@@ -3929,54 +3954,28 @@ class _ResultsOffersSectionState extends State<ResultsOffersSection> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (offer.title.trim().isNotEmpty)
-                  Text(
-                    offer.title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
+          if (offers.length > 1)
+            Positioned(
+              bottom: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(min(offers.length, 8), (dotIndex) {
+                  final active = dotIndex == index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: active ? 18 : 7,
+                    height: 7,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                if (offers.length > 1) ...[
-                  const SizedBox(height: 8),
-                  if (offers.length <= 8)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(offers.length, (dotIndex) {
-                        final active = dotIndex == index;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          width: active ? 18 : 7,
-                          height: 7,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            color: active
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        );
-                      }),
-                    )
-                  else
-                    Text(
-                      '${index + 1} / ${offers.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                ],
-              ],
+                  );
+                }),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -4029,7 +4028,7 @@ class _ResultsTextSectionState extends State<ResultsTextSection> {
       return const SizedBox.shrink();
     }
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFF),
         borderRadius: BorderRadius.circular(16),
@@ -4044,19 +4043,19 @@ class _ResultsTextSectionState extends State<ResultsTextSection> {
               textAlign: TextAlign.right,
               style: const TextStyle(
                 color: Color(0xFF1E3A8A),
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
           ],
           Text(
             current.body,
             textAlign: TextAlign.right,
             style: const TextStyle(
               color: Color(0xFF334155),
-              fontSize: 15,
-              height: 1.55,
+              fontSize: 14,
+              height: 1.45,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -4120,22 +4119,26 @@ class NationalResultButton extends StatelessWidget {
     required this.title,
     required this.examType,
     required this.icon,
-    required this.size,
+    required this.color,
+    required this.width,
     super.key,
   });
 
   final String title;
   final String examType;
   final IconData icon;
-  final double size;
+  final Color color;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: size,
+    return SizedBox(
+      width: width,
+      height: 96,
       child: Material(
-        color: const Color(0xFF2457D6),
+        color: color,
         borderRadius: BorderRadius.circular(18),
+        elevation: 0,
         child: InkWell(
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
@@ -4149,22 +4152,38 @@ class NationalResultButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
+              textDirection: TextDirection.rtl,
               children: [
-                Icon(icon, color: Colors.white, size: 34),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    height: 1.2,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
                   ),
+                  child: Icon(icon, color: Colors.white, size: 28),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.right,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ],
             ),
