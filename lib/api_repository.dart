@@ -45,12 +45,12 @@ class ApiRepository {
   }
 
   Future<Map<String, dynamic>> signIn({
-    required String email,
+    required String phone,
     required String password,
   }) async {
     final data = await post('/api/auth/login', {
-      'identifier': email.trim(),
-      'email': email.trim(),
+      'identifier': phone.trim(),
+      'phone': phone.trim(),
       'password': password,
     }, authenticated: false);
     final token = data['token'] as String?;
@@ -106,15 +106,14 @@ class ApiRepository {
 
   Future<Map<String, dynamic>> registerStudent({
     required String name,
-    required String email,
+    required String phone,
     required String password,
     required String courseId,
     required String paymentSenderPhone,
   }) {
     return post('/api/auth/register-student', {
       'name': name,
-      'email': email,
-      'phone': email,
+      'phone': phone,
       'password': password,
       'courseId': courseId,
       'paymentSenderPhone': paymentSenderPhone,
@@ -141,7 +140,7 @@ class ApiRepository {
 
   Future<Map<String, dynamic>> createUser({
     required String name,
-    required String email,
+    required String phone,
     required String password,
     required String role,
     required String courseId,
@@ -149,8 +148,7 @@ class ApiRepository {
   }) {
     return post('/api/admin/users', {
       'name': name,
-      'email': email,
-      'phone': email,
+      'phone': phone,
       'password': password,
       'role': role,
       'courseId': courseId,

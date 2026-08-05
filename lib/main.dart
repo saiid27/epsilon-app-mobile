@@ -178,12 +178,14 @@ String friendlyFirebaseError(Object error) {
   if (text.contains('permission-denied')) {
     return 'هذا الحساب لا يملك صلاحية الإدارة.';
   }
-  if (text.contains('email-already-exists') ||
+  if (text.contains('phone-already-exists') ||
+      text.contains('phone-already-in-use') ||
+      text.contains('email-already-exists') ||
       text.contains('email-already-in-use')) {
-    return 'هذا البريد مستخدم مسبقا.';
+    return 'رقم الهاتف مستخدم مسبقا.';
   }
-  if (text.contains('invalid-email')) {
-    return 'البريد الإلكتروني غير صحيح.';
+  if (text.contains('invalid-phone') || text.contains('invalid-email')) {
+    return 'رقم الهاتف غير صحيح.';
   }
   if (text.contains('weak-password')) {
     return 'كلمة المرور ضعيفة. اختر كلمة مرور أقوى.';
@@ -203,7 +205,7 @@ class AppUser {
   AppUser({
     required this.id,
     required this.name,
-    required this.email,
+    required this.phone,
     required this.password,
     required this.role,
     required this.status,
@@ -217,7 +219,7 @@ class AppUser {
 
   final String id;
   final String name;
-  final String email;
+  final String phone;
   final String password;
   final UserRole role;
   AccountStatus status;
@@ -1005,7 +1007,7 @@ class SchoolStore extends ChangeNotifier {
     return AppUser(
       id: doc.id,
       name: (data[UserFields.name] as String?) ?? 'مستخدم',
-      email: (data[UserFields.email] as String?) ?? '',
+      phone: (data[UserFields.email] as String?) ?? '',
       password: '',
       role: _roleFromString(data[UserFields.role] as String?),
       status: _statusFromString(data[UserFields.status] as String?),
@@ -1096,7 +1098,7 @@ class SchoolStore extends ChangeNotifier {
           (data['name'] as String?) ??
           (data['username'] as String?) ??
           'مستخدم',
-      email: (data['email'] as String?) ?? (data['phone'] as String?) ?? '',
+      phone: (data['phone'] as String?) ?? (data['email'] as String?) ?? '',
       password: '',
       role: _roleFromString(data['role'] as String?),
       status: _statusFromString(data['status'] as String?),
@@ -1269,7 +1271,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-admin',
         name: 'إدارة المدرسة',
-        email: 'admin@demo.com',
+        phone: '22240000000',
         password: '123456',
         role: UserRole.admin,
         status: AccountStatus.active,
@@ -1277,7 +1279,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-teacher',
         name: 'الأستاذ أحمد',
-        email: 'teacher@demo.com',
+        phone: '22241111111',
         password: '123456',
         role: UserRole.teacher,
         status: AccountStatus.active,
@@ -1287,7 +1289,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-student',
         name: 'الطالب محمد',
-        email: 'student@demo.com',
+        phone: '22242222222',
         password: '123456',
         role: UserRole.student,
         status: AccountStatus.active,
@@ -1361,14 +1363,14 @@ class SchoolStore extends ChangeNotifier {
     );
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String phone, String password) async {
     if (firebaseEnabled) {
       try {
         isLoading = true;
         lastError = null;
         notifyListeners();
         final userData = await (_repository as ApiRepository).signIn(
-          email: email,
+          phone: phone,
           password: password,
         );
         currentUser = _userFromApi(userData);
@@ -1388,9 +1390,9 @@ class SchoolStore extends ChangeNotifier {
       }
     }
 
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedPhone = phone.trim();
     final match = users.where(
-      (user) => user.email == normalizedEmail && user.password == password,
+      (user) => user.phone == normalizedPhone && user.password == password,
     );
 
     if (match.isEmpty) {
@@ -1439,7 +1441,7 @@ class SchoolStore extends ChangeNotifier {
     users[index] = AppUser(
       id: user.id,
       name: user.name,
-      email: user.email,
+      phone: user.phone,
       password: newPassword,
       role: user.role,
       status: user.status,
@@ -1455,7 +1457,7 @@ class SchoolStore extends ChangeNotifier {
     return true;
   }
 
-  Future<void> sendPasswordResetEmail(String email) async {
+  Future<void> sendPasswordResetEmail(String phone) async {
     if (firebaseEnabled) {
       lastError = 'استعادة كلمة المرور تتم حالياً من موقع الإدارة.';
       notifyListeners();
@@ -1465,7 +1467,7 @@ class SchoolStore extends ChangeNotifier {
 
   Future<void> registerStudent({
     required String name,
-    required String email,
+    required String phone,
     required String password,
     required String courseId,
     required String paymentProofPath,
@@ -1478,7 +1480,7 @@ class SchoolStore extends ChangeNotifier {
       }
       await (_repository as ApiRepository).registerStudent(
         name: name,
-        email: email,
+        phone: phone,
         password: password,
         courseId: courseId,
         paymentSenderPhone: paymentSenderPhone,
@@ -1491,7 +1493,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-${DateTime.now().microsecondsSinceEpoch}',
         name: name.trim(),
-        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password: password,
         role: UserRole.student,
         status: AccountStatus.pending,
@@ -1506,7 +1508,7 @@ class SchoolStore extends ChangeNotifier {
 
   void createStudentByAdmin({
     required String name,
-    required String email,
+    required String phone,
     required String password,
     required String courseId,
   }) {
@@ -1519,7 +1521,7 @@ class SchoolStore extends ChangeNotifier {
         (_repository as ApiRepository)
             .createUser(
               name: name,
-              email: email,
+              phone: phone,
               password: password,
               role: 'student',
               courseId: courseId,
@@ -1534,7 +1536,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-${DateTime.now().microsecondsSinceEpoch}',
         name: name.trim(),
-        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password: password,
         role: UserRole.student,
         status: AccountStatus.active,
@@ -1547,7 +1549,7 @@ class SchoolStore extends ChangeNotifier {
 
   Future<void> createTeacher({
     required String name,
-    required String email,
+    required String phone,
     required String password,
     required String classId,
     required String courseId,
@@ -1556,7 +1558,7 @@ class SchoolStore extends ChangeNotifier {
     if (firebaseEnabled) {
       await (_repository as ApiRepository).createUser(
         name: name,
-        email: email,
+        phone: phone,
         password: password,
         role: 'teacher',
         courseId: courseId,
@@ -1570,7 +1572,7 @@ class SchoolStore extends ChangeNotifier {
       AppUser(
         id: 'u-${DateTime.now().microsecondsSinceEpoch}',
         name: name.trim(),
-        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password: password,
         role: UserRole.teacher,
         status: AccountStatus.active,
@@ -2865,14 +2867,14 @@ class LoginCard extends StatefulWidget {
 }
 
 class _LoginCardState extends State<LoginCard> {
-  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController();
   bool obscurePassword = true;
   String? error;
 
   @override
   void dispose() {
-    emailController.dispose();
+    phoneController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -2888,16 +2890,16 @@ class _LoginCardState extends State<LoginCard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
+          controller: phoneController,
+          keyboardType: TextInputType.phone,
           decoration: InputDecoration(
-            hintText: 'البريد الإلكتروني أو رقم هاتفك',
+            hintText: 'رقم الهاتف',
             hintStyle: const TextStyle(
               color: Color(0xFF7A86AA),
               fontWeight: FontWeight.w700,
             ),
             suffixIcon: Icon(
-              Icons.person_outline_rounded,
+              Icons.phone_iphone_rounded,
               color: widget.primaryColor,
             ),
             filled: true,
@@ -2994,7 +2996,7 @@ class _LoginCardState extends State<LoginCard> {
             onPressed: () async {
               final store = StoreScope.of(context);
               final ok = await store.login(
-                emailController.text,
+                phoneController.text,
                 passwordController.text,
               );
               if (!mounted) {
@@ -3074,14 +3076,14 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   String? message;
   bool success = false;
   bool sending = false;
 
   @override
   void dispose() {
-    emailController.dispose();
+    phoneController.dispose();
     super.dispose();
   }
 
@@ -3097,22 +3099,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         children: [
           const HeaderPanel(
             title: 'استعادة كلمة المرور',
-            subtitle: 'أدخل بريدك الإلكتروني لإرسال رابط إعادة التعيين',
+            subtitle: 'أدخل رقم هاتفك لاستعادة الوصول إلى الحساب',
             icon: Icons.lock_reset_rounded,
           ),
           const SizedBox(height: 16),
           SectionCard(
-            title: 'البريد الإلكتروني',
-            icon: Icons.mail_outline_rounded,
+            title: 'رقم الهاتف',
+            icon: Icons.phone_iphone_rounded,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    labelText: 'البريد الإلكتروني',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                    labelText: 'رقم الهاتف',
+                    prefixIcon: Icon(Icons.phone_iphone_rounded),
                   ),
                 ),
                 if (message != null) ...[
@@ -3132,11 +3134,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   onPressed: sending
                       ? null
                       : () async {
-                          final email = emailController.text.trim();
-                          if (email.isEmpty) {
+                          final phone = phoneController.text.trim();
+                          if (phone.isEmpty) {
                             setState(() {
                               success = false;
-                              message = 'أدخل البريد الإلكتروني أولا.';
+                              message = 'أدخل رقم الهاتف أولا.';
                             });
                             return;
                           }
@@ -3147,14 +3149,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           });
 
                           try {
-                            await store.sendPasswordResetEmail(email);
+                            await store.sendPasswordResetEmail(phone);
                             if (!mounted) {
                               return;
                             }
                             setState(() {
                               success = true;
                               message =
-                                  'تم إرسال رابط إعادة تعيين كلمة المرور إن كان البريد مسجلا.';
+                                  'إذا كان الرقم مسجلا ستتم متابعة الاستعادة من الإدارة.';
                             });
                           } on Object catch (error) {
                             if (!mounted) {
@@ -5072,14 +5074,14 @@ class RegisterCard extends StatefulWidget {
 
 class _RegisterCardState extends State<RegisterCard> {
   final nameController = TextEditingController();
-  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController();
   String? error;
 
   @override
   void dispose() {
     nameController.dispose();
-    emailController.dispose();
+    phoneController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -5103,11 +5105,11 @@ class _RegisterCardState extends State<RegisterCard> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
-                labelText: 'البريد الإلكتروني',
-                prefixIcon: Icon(Icons.mail_outline_rounded),
+                labelText: 'رقم الهاتف',
+                prefixIcon: Icon(Icons.phone_iphone_rounded),
               ),
             ),
             const SizedBox(height: 12),
@@ -5131,7 +5133,7 @@ class _RegisterCardState extends State<RegisterCard> {
             FilledButton.icon(
               onPressed: () {
                 if (nameController.text.trim().isEmpty ||
-                    emailController.text.trim().isEmpty ||
+                    phoneController.text.trim().isEmpty ||
                     passwordController.text.length < 6 ||
                     store.courses.isEmpty) {
                   setState(
@@ -5146,7 +5148,7 @@ class _RegisterCardState extends State<RegisterCard> {
                   MaterialPageRoute(
                     builder: (_) => StudentCourseSelectionPage(
                       name: nameController.text.trim(),
-                      email: emailController.text.trim(),
+                      phone: phoneController.text.trim(),
                       password: passwordController.text,
                     ),
                   ),
@@ -5165,13 +5167,13 @@ class _RegisterCardState extends State<RegisterCard> {
 class StudentCourseSelectionPage extends StatelessWidget {
   const StudentCourseSelectionPage({
     required this.name,
-    required this.email,
+    required this.phone,
     required this.password,
     super.key,
   });
 
   final String name;
-  final String email;
+  final String phone;
   final String password;
 
   @override
@@ -5260,7 +5262,7 @@ class StudentCourseSelectionPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => StudentPaymentPage(
                         name: name,
-                        email: email,
+                        phone: phone,
                         password: password,
                         courseId: course.id,
                       ),
@@ -5434,14 +5436,14 @@ class StudentCourseCard extends StatelessWidget {
 class StudentPaymentPage extends StatefulWidget {
   const StudentPaymentPage({
     required this.name,
-    required this.email,
+    required this.phone,
     required this.password,
     required this.courseId,
     super.key,
   });
 
   final String name;
-  final String email;
+  final String phone;
   final String password;
   final String courseId;
 
@@ -5507,7 +5509,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
     try {
       await StoreScope.of(context).registerStudent(
         name: widget.name,
-        email: widget.email,
+        phone: widget.phone,
         password: widget.password,
         courseId: widget.courseId,
         paymentProofPath: image.path,
@@ -5563,7 +5565,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 InfoRow(label: 'الاسم', value: widget.name),
-                InfoRow(label: 'البريد', value: widget.email),
+                InfoRow(label: 'رقم الهاتف', value: widget.phone),
                 InfoRow(label: 'القسم', value: course?.title ?? 'غير محدد'),
                 TextField(
                   controller: paymentSenderPhoneController,
@@ -5613,7 +5615,7 @@ class _StudentPaymentPageState extends State<StudentPaymentPage>
             const SizedBox(height: 16),
             SectionCard(
               title: 'تم إرسال الطلب',
-              icon: Icons.mark_email_read_rounded,
+              icon: Icons.verified_user_rounded,
               child: Column(
                 children: [
                   const Text(
@@ -6187,7 +6189,7 @@ class _AdminStudentsReportPageState extends State<AdminStudentsReportPage> {
                             columns: const [
                               DataColumn(label: Text('#')),
                               DataColumn(label: Text('الاسم')),
-                              DataColumn(label: Text('البريد')),
+                              DataColumn(label: Text('رقم الهاتف')),
                               DataColumn(label: Text('القسم')),
                               DataColumn(label: Text('الحالة')),
                               DataColumn(label: Text('رقم الدفع')),
@@ -6222,7 +6224,7 @@ class _AdminStudentsReportPageState extends State<AdminStudentsReportPage> {
       cells: [
         DataCell(Text(index.toString())),
         DataCell(Text(student.name)),
-        DataCell(Text(student.email)),
+        DataCell(Text(student.phone)),
         DataCell(Text(course?.title ?? 'غير محدد')),
         DataCell(Text(statusLabel(student.status))),
         DataCell(Text(student.paymentSenderPhone ?? '-')),
@@ -6713,14 +6715,14 @@ class CreateStudentForm extends StatefulWidget {
 
 class _CreateStudentFormState extends State<CreateStudentForm> {
   final nameController = TextEditingController();
-  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController(text: '123456');
   String? courseId;
 
   @override
   void dispose() {
     nameController.dispose();
-    emailController.dispose();
+    phoneController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -6744,9 +6746,12 @@ class _CreateStudentFormState extends State<CreateStudentForm> {
           ),
           const SizedBox(height: 10),
           TextField(
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+            controller: phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'رقم الهاتف',
+              prefixIcon: Icon(Icons.phone_iphone_rounded),
+            ),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -6775,7 +6780,7 @@ class _CreateStudentFormState extends State<CreateStudentForm> {
             child: FilledButton.icon(
               onPressed: () {
                 if (nameController.text.trim().isEmpty ||
-                    emailController.text.trim().isEmpty ||
+                    phoneController.text.trim().isEmpty ||
                     passwordController.text.length < 6 ||
                     courseId == null) {
                   return;
@@ -6783,12 +6788,12 @@ class _CreateStudentFormState extends State<CreateStudentForm> {
 
                 store.createStudentByAdmin(
                   name: nameController.text,
-                  email: emailController.text,
+                  phone: phoneController.text,
                   password: passwordController.text,
                   courseId: courseId!,
                 );
                 nameController.clear();
-                emailController.clear();
+                phoneController.clear();
               },
               icon: const Icon(Icons.add_rounded),
               label: const Text('إضافة الطالب'),
@@ -7501,7 +7506,7 @@ class CreateTeacherForm extends StatefulWidget {
 
 class _CreateTeacherFormState extends State<CreateTeacherForm> {
   final nameController = TextEditingController();
-  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController(text: '123456');
   String? classId;
   String? courseId;
@@ -7512,7 +7517,7 @@ class _CreateTeacherFormState extends State<CreateTeacherForm> {
   @override
   void dispose() {
     nameController.dispose();
-    emailController.dispose();
+    phoneController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -7543,8 +7548,12 @@ class _CreateTeacherFormState extends State<CreateTeacherForm> {
           ),
           const SizedBox(height: 10),
           TextField(
-            controller: emailController,
-            decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+            controller: phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'رقم الهاتف',
+              prefixIcon: Icon(Icons.phone_iphone_rounded),
+            ),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -7606,7 +7615,7 @@ class _CreateTeacherFormState extends State<CreateTeacherForm> {
                   ? null
                   : () async {
                       if (nameController.text.trim().isEmpty ||
-                          emailController.text.trim().isEmpty ||
+                          phoneController.text.trim().isEmpty ||
                           passwordController.text.length < 6 ||
                           classId == null ||
                           courseId == null ||
@@ -7626,7 +7635,7 @@ class _CreateTeacherFormState extends State<CreateTeacherForm> {
                       try {
                         await store.createTeacher(
                           name: nameController.text,
-                          email: emailController.text,
+                          phone: phoneController.text,
                           password: passwordController.text,
                           classId: classId!,
                           courseId: courseId!,
@@ -7636,7 +7645,7 @@ class _CreateTeacherFormState extends State<CreateTeacherForm> {
                           return;
                         }
                         nameController.clear();
-                        emailController.clear();
+                        phoneController.clear();
                         setState(
                           () => message = 'تم إنشاء حساب الأستاذ بنجاح.',
                         );
@@ -8156,7 +8165,7 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 InfoRow(label: 'الاسم', value: user?.name ?? '-'),
-                InfoRow(label: 'البريد', value: user?.email ?? '-'),
+                InfoRow(label: 'رقم الهاتف', value: user?.phone ?? '-'),
                 InfoRow(label: 'الدور', value: roleLabel(user?.role)),
               ],
             ),
@@ -8829,7 +8838,7 @@ class UserTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       [
-                        user.email,
+                        user.phone,
                         if (course != null) course.title,
                       ].join(' - '),
                       maxLines: 1,

@@ -13,7 +13,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('تسجيل الدخول'), findsOneWidget);
-    expect(find.text('البريد الإلكتروني أو رقم هاتفك'), findsOneWidget);
+    expect(find.text('رقم الهاتف'), findsWidgets);
     expect(find.text('كلمة المرور'), findsOneWidget);
     expect(find.text('نتائج المسابقات الوطنية'), findsOneWidget);
     expect(find.text('Google'), findsNothing);
