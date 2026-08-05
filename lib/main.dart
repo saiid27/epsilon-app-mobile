@@ -23,6 +23,15 @@ import 'api_repository.dart';
 import 'firebase_options.dart';
 import 'firebase_schema.dart';
 
+const epsilonBlue = Color(0xFF2457E6);
+const epsilonTeal = Color(0xFF0F9F7A);
+const epsilonGold = Color(0xFFF2B544);
+const epsilonInk = Color(0xFF17213D);
+const epsilonMuted = Color(0xFF66708F);
+const epsilonSurface = Color(0xFFFFFFFF);
+const epsilonSoft = Color(0xFFF4F7FC);
+const epsilonLine = Color(0xFFDDE6F5);
+
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -2160,15 +2169,37 @@ class _EpsilonAppState extends State<EpsilonApp> {
             },
             theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0F766E),
-                primary: const Color(0xFF0F766E),
-                secondary: const Color(0xFFEAB308),
+                seedColor: epsilonBlue,
+                primary: epsilonBlue,
+                secondary: epsilonTeal,
+                tertiary: epsilonGold,
               ),
-              scaffoldBackgroundColor: const Color(0xFFF7F8FA),
+              scaffoldBackgroundColor: epsilonSoft,
               useMaterial3: true,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.transparent,
+                foregroundColor: epsilonInk,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: true,
+                titleTextStyle: TextStyle(
+                  color: epsilonInk,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               inputDecorationTheme: InputDecorationTheme(
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: epsilonLine),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: epsilonLine),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: epsilonBlue, width: 1.5),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -2177,24 +2208,76 @@ class _EpsilonAppState extends State<EpsilonApp> {
                 elevation: 0,
                 color: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: epsilonLine),
+                ),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: epsilonBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(64, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: epsilonBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  minimumSize: const Size(64, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: epsilonBlue,
+                  side: const BorderSide(color: epsilonLine),
+                  minimumSize: const Size(64, 46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: epsilonBlue,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF2F5BEA),
+                seedColor: epsilonBlue,
                 brightness: Brightness.dark,
               ),
               scaffoldBackgroundColor: const Color(0xFF0F172A),
               useMaterial3: true,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: true,
+              ),
               inputDecorationTheme: InputDecorationTheme(
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 filled: true,
                 fillColor: const Color(0xFF111827),
+              ),
+              cardTheme: CardThemeData(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
             home: StartupSplashGate(firebaseStatus: widget.firebaseStatus),
@@ -2515,6 +2598,29 @@ class AppShell extends StatelessWidget {
   }
 }
 
+class EpsilonBackground extends StatelessWidget {
+  const EpsilonBackground({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final base = isDark ? const Color(0xFF0F172A) : epsilonSoft;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [base, isDark ? const Color(0xFF111827) : Colors.white, base],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({required this.firebaseStatus, super.key});
 
@@ -2549,197 +2655,197 @@ class _AuthScreenState extends State<AuthScreen>
     const loginAccent = Color(0xFF2F5EEA);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FF),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 32),
-                  AspectRatio(
-                    aspectRatio: 1024 / 610,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Image.asset(
-                            'assets/onboarding/login_hero.png',
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (!widget.firebaseStatus.isReady) ...[
-                          FirebaseSetupBanner(
-                            message:
-                                widget.firebaseStatus.errorMessage ??
-                                'Firebase غير متصل حاليًا.',
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        registerMode
-                            ? const RegisterCard()
-                            : const LoginCard(primaryColor: loginAccent),
-                        const SizedBox(height: 18),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              registerMode
-                                  ? 'لديك حساب بالفعل؟'
-                                  : 'ليس لديك حساب؟',
-                              style: const TextStyle(
-                                color: Color(0xFF64748B),
-                                fontWeight: FontWeight.w600,
-                              ),
+      backgroundColor: epsilonSoft,
+      body: EpsilonBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 32),
+                    AspectRatio(
+                      aspectRatio: 1024 / 610,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Image.asset(
+                              'assets/onboarding/login_hero.png',
+                              fit: BoxFit.cover,
+                              alignment: Alignment.topCenter,
                             ),
-                            TextButton(
-                              onPressed: () {
-                                setState(() => registerMode = !registerMode);
-                              },
-                              child: Text(
-                                registerMode ? 'تسجيل الدخول' : 'إنشاء حساب',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (!widget.firebaseStatus.isReady) ...[
+                            FirebaseSetupBanner(
+                              message:
+                                  widget.firebaseStatus.errorMessage ??
+                                  'Firebase غير متصل حاليًا.',
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          registerMode
+                              ? const RegisterCard()
+                              : const LoginCard(primaryColor: loginAccent),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                registerMode
+                                    ? 'لديك حساب بالفعل؟'
+                                    : 'ليس لديك حساب؟',
                                 style: const TextStyle(
-                                  color: loginAccent,
-                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (!registerMode)
-                          AnimatedBuilder(
-                            animation: _nationalResultsButtonController,
-                            builder: (context, child) {
-                              final progress =
-                                  _nationalResultsButtonController.value;
-                              final pulse = sin(progress * pi * 2);
-                              final scale = 1 + (pulse.clamp(0, 1) * 0.018);
-                              final glowOpacity =
-                                  0.20 + (pulse.clamp(0, 1) * 0.18);
-
-                              return Transform.scale(
-                                scale: scale,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(22),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Color.fromRGBO(
-                                          16,
-                                          185,
-                                          129,
-                                          glowOpacity,
-                                        ),
-                                        blurRadius: 22,
-                                        spreadRadius: 1.5,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
+                              TextButton(
+                                onPressed: () {
+                                  setState(() => registerMode = !registerMode);
+                                },
+                                child: Text(
+                                  registerMode ? 'تسجيل الدخول' : 'إنشاء حساب',
+                                  style: const TextStyle(
+                                    color: loginAccent,
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(18),
-                                    child: Stack(
-                                      children: [
-                                        Positioned.fill(
-                                          child: DecoratedBox(
-                                            decoration: const BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  Color(0xFF10B981),
-                                                  Color(0xFF059669),
-                                                  Color(0xFF16A34A),
-                                                ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!registerMode)
+                            AnimatedBuilder(
+                              animation: _nationalResultsButtonController,
+                              builder: (context, child) {
+                                final progress =
+                                    _nationalResultsButtonController.value;
+                                final pulse = sin(progress * pi * 2);
+                                final scale = 1 + (pulse.clamp(0, 1) * 0.018);
+                                final glowOpacity =
+                                    0.20 + (pulse.clamp(0, 1) * 0.18);
+
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(22),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Color.fromRGBO(
+                                            16,
+                                            185,
+                                            129,
+                                            glowOpacity,
+                                          ),
+                                          blurRadius: 22,
+                                          spreadRadius: 1.5,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: DecoratedBox(
+                                              decoration: const BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    Color(0xFF10B981),
+                                                    Color(0xFF059669),
+                                                    Color(0xFF16A34A),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        Positioned.fill(
-                                          child: FractionalTranslation(
-                                            translation: Offset(
-                                              (progress * 2.2) - 1.1,
-                                              0,
-                                            ),
-                                            child: Align(
-                                              alignment: Alignment.center,
-                                              child: Container(
-                                                width: 82,
-                                                decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    colors: [
-                                                      Color.fromRGBO(
-                                                        255,
-                                                        255,
-                                                        255,
-                                                        0,
-                                                      ),
-                                                      Color.fromRGBO(
-                                                        255,
-                                                        255,
-                                                        255,
-                                                        0.24,
-                                                      ),
-                                                      Color.fromRGBO(
-                                                        255,
-                                                        255,
-                                                        255,
-                                                        0,
-                                                      ),
-                                                    ],
+                                          Positioned.fill(
+                                            child: FractionalTranslation(
+                                              translation: Offset(
+                                                (progress * 2.2) - 1.1,
+                                                0,
+                                              ),
+                                              child: Align(
+                                                alignment: Alignment.center,
+                                                child: Container(
+                                                  width: 82,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        Color.fromRGBO(
+                                                          255,
+                                                          255,
+                                                          255,
+                                                          0,
+                                                        ),
+                                                        Color.fromRGBO(
+                                                          255,
+                                                          255,
+                                                          255,
+                                                          0.24,
+                                                        ),
+                                                        Color.fromRGBO(
+                                                          255,
+                                                          255,
+                                                          255,
+                                                          0,
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        child!,
-                                      ],
+                                          child!,
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                );
+                              },
+                              child: FilledButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const NationalResultsPage(),
+                                  ),
                                 ),
-                              );
-                            },
-                            child: FilledButton.icon(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const NationalResultsPage(),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  minimumSize: const Size.fromHeight(58),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
                                 ),
-                              ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                minimumSize: const Size.fromHeight(58),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                              ),
-                              icon: const Icon(Icons.emoji_events_rounded),
-                              label: const Text(
-                                'نتائج المسابقات الوطنية',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                icon: const Icon(Icons.emoji_events_rounded),
+                                label: const Text(
+                                  'نتائج المسابقات الوطنية',
+                                  style: TextStyle(fontWeight: FontWeight.w900),
                                 ),
                               ),
                             ),
-                          ),
-                        const AuthFooterLinks(),
-                        const SizedBox(height: 24),
-                        const DeveloperCredit(),
-                      ],
+                          const AuthFooterLinks(),
+                          const SizedBox(height: 24),
+                          const DeveloperCredit(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -7910,9 +8016,22 @@ class EpsilonAppBar extends StatelessWidget implements PreferredSizeWidget {
     final unreadCount = store.unreadNotificationCount;
 
     return AppBar(
-      backgroundColor: const Color(0xFFF7F9FF),
-      surfaceTintColor: const Color(0xFFF7F9FF),
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: [
+              Colors.white.withValues(alpha: .96),
+              epsilonSoft.withValues(alpha: .88),
+            ],
+          ),
+          border: const Border(bottom: BorderSide(color: epsilonLine)),
+        ),
+      ),
       leading: canGoBack
           ? IconButton(
               tooltip: 'رجوع',
@@ -7928,7 +8047,7 @@ class EpsilonAppBar extends StatelessWidget implements PreferredSizeWidget {
               icon: const Icon(Icons.settings_rounded),
             )
           : null,
-      title: const SizedBox.shrink(),
+      title: Text(title),
       actions: showLogout
           ? [
               IconButton(
@@ -8539,19 +8658,19 @@ class SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EEFF)),
+        color: epsilonSurface.withValues(alpha: .96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: epsilonLine),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1F2937).withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: epsilonInk.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(17),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -8561,10 +8680,17 @@ class SectionCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2F5BEA).withValues(alpha: 0.1),
+                    gradient: LinearGradient(
+                      begin: AlignmentDirectional.topStart,
+                      end: AlignmentDirectional.bottomEnd,
+                      colors: [
+                        epsilonBlue.withValues(alpha: 0.13),
+                        epsilonTeal.withValues(alpha: 0.10),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: const Color(0xFF2F5BEA), size: 20),
+                  child: Icon(icon, color: epsilonBlue, size: 20),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -8572,6 +8698,7 @@ class SectionCard extends StatelessWidget {
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      color: epsilonInk,
                     ),
                   ),
                 ),
@@ -8603,13 +8730,17 @@ class HeaderPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF2F5BEA),
-        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [epsilonBlue, Color(0xFF173DAD), epsilonTeal],
+        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2F5BEA).withValues(alpha: 0.18),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: epsilonBlue.withValues(alpha: 0.22),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
           ),
         ],
       ),

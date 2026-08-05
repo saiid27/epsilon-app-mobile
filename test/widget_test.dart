@@ -10,11 +10,12 @@ void main() {
       const EpsilonApp(firebaseStatus: FirebaseBootstrap(isReady: false)),
     );
     await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('مرحبا بك مجددا'), findsOneWidget);
     expect(find.text('تسجيل الدخول'), findsOneWidget);
     expect(find.text('البريد الإلكتروني أو رقم هاتفك'), findsOneWidget);
+    expect(find.text('كلمة المرور'), findsOneWidget);
+    expect(find.text('نتائج المسابقات الوطنية'), findsOneWidget);
     expect(find.text('Google'), findsNothing);
     expect(find.text('Facebook'), findsNothing);
     expect(find.text('Apple'), findsNothing);
