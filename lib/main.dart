@@ -2682,22 +2682,24 @@ class _AuthScreenState extends State<AuthScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: AspectRatio(
-                        aspectRatio: 1280 / 840,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.asset(
-                            'assets/onboarding/epsilon_logo.jpeg',
-                            fit: BoxFit.contain,
+                    const SizedBox(height: 18),
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 270),
+                        child: AspectRatio(
+                          aspectRatio: 1280 / 840,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset(
+                              'assets/onboarding/epsilon_logo.jpeg',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
+                      padding: const EdgeInsets.fromLTRB(40, 20, 40, 28),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
