@@ -4533,7 +4533,7 @@ class NationalResultCard extends StatelessWidget {
       children: [
         if (style != null) ...[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: style.background,
               borderRadius: BorderRadius.circular(12),
@@ -4542,16 +4542,19 @@ class NationalResultCard extends StatelessWidget {
             child: Row(
               textDirection: TextDirection.rtl,
               children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: style.color,
-                    shape: BoxShape.circle,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    color: Colors.white,
+                    child: Image.asset(
+                      'assets/onboarding/epsilon_logo.jpeg',
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  child: Icon(style.icon, color: Colors.white, size: 28),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 11),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -4561,11 +4564,12 @@ class NationalResultCard extends StatelessWidget {
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           color: style.color,
-                          fontSize: 18,
+                          fontSize: 17,
                           fontWeight: FontWeight.w900,
+                          height: 1.15,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         style.subtitle,
                         textAlign: TextAlign.right,
@@ -4573,10 +4577,21 @@ class NationalResultCard extends StatelessWidget {
                           color: Color(0xFF475569),
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
+                          height: 1.2,
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: style.color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(style.icon, color: Colors.white, size: 19),
                 ),
               ],
             ),
