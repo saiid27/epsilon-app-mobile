@@ -3722,6 +3722,13 @@ class NationalResultsPage extends StatelessWidget {
                           color: const Color(0xFF2457D6),
                           width: contentWidth,
                         ),
+                        NationalResultButton(
+                          title: 'مسابقة الامتياز',
+                          examType: 'excellence',
+                          icon: Icons.star_rounded,
+                          color: const Color(0xFF2457D6),
+                          width: contentWidth,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
